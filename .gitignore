@@ -4,3 +4,9 @@ node_modules/
 *.numbers
 .env
 .DS_Store
+data/
+backend/node_modules/
+geojson-backend/node_modules/
+map-selector/node_modules/
+map-selector/build/
+.gemini/

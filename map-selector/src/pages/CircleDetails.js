@@ -1,21 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MapComponent from './MapComponent';
 import Sidebar from './Sidebar';
 import { Container, Grid, Box, Button } from '@mui/material';
 import { useLocation } from 'react-router-dom';
+import axios from 'axios';
+import { GEOJSON_BACKEND_URL } from '../config';
 import './CircleDetails.css';
 import * as XLSX from 'xlsx';
 
 const CircleDetails = () => {
   const location = useLocation();
   const { circle } = location.state;
-  console.log("circle", circle)
   const [features, setFeatures] = useState([]);
+  const [wards, setWards] = useState([]);
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [businessInfo, setBusinessInfo] = useState(null);
   const [mapKey, setMapKey] = useState(0);
   const [businesses, setBusinesses] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const fetchWards = async () => {
+      try {
+        const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles/${circle._id}/wards`);
+        setWards(response.data.wards);
+      } catch (error) {
+        console.error('Error fetching wards:', error);
+      }
+    };
+    if (circle && circle._id) {
+      fetchWards();
+    }
+  }, [circle]);
 
   const updateSelectedFeature = (updatedFeature) => {
     setSelectedFeature(updatedFeature);
@@ -79,6 +95,7 @@ const CircleDetails = () => {
               setBusinessInfo={setBusinessInfo}
               setBusinesses={setBusinesses}
               circle={circle} // Pass the circle data as a prop
+              wards={wards} // Pass the wards belonging to this circle
             />
             <Button className={`sidebar-toggle ${sidebarOpen ? 'open' : 'close'}`} onClick={() => setSidebarOpen(prev => !prev)}>
               <i className={`fas ${sidebarOpen ? 'fa-chevron-right' : 'fa-chevron-left'}`}></i>

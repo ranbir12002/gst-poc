@@ -8,13 +8,15 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
   const [polygonName, setPolygonName] = useState(circle?.name || '');
   const [polygonRegionName, setPolygonRegionName] = useState(circle?.region?.name);
   const [address, setAddress] = useState('');
-  console.log(selectedFeature)
+  const [entityType, setEntityType] = useState('Circle');
+
   useEffect(() => {
     if (selectedFeature) {
       setPolygonName(selectedFeature.properties.name || '');
-      setPolygonRegionName(selectedFeature.properties.regionName || '');
+      setPolygonRegionName(selectedFeature.properties.regionName || circle?.region?.name || '');
+      setEntityType(selectedFeature.properties.type === 'ward' ? 'Ward' : 'Circle');
     }
-  }, [selectedFeature]);
+  }, [selectedFeature, circle]);
 
   useEffect(() => {
     if (businessInfo) {
@@ -161,28 +163,33 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
 
   return (
     <Box sx={{ padding: 2 }}>
-      <Typography variant="h6" gutterBottom>Polygon Information</Typography>
+      <Typography variant="h6" gutterBottom>{entityType} Information</Typography>
       <TextField
-
-        label="Polygon Name"
+        label={`${entityType} Name`}
         value={polygonName}
         onChange={handleNameChange}
         fullWidth
         margin="normal"
+        disabled={entityType !== 'Polygon'}
       />
       <TextField
-        label="Polygon Region Name"
+        label="Region Name"
         value={polygonRegionName}
         onChange={handleRegionNameChange}
         fullWidth
         margin="normal"
+        disabled={entityType !== 'Polygon'}
       />
       <Box sx={{ display: 'flex', gap: 1, marginY: 2 }}>
-        <Button variant="contained" color="primary" onClick={handleSave}>Save</Button>
-        <Button variant="contained" color="secondary" onClick={handleUpdate} disabled={!selectedFeature}>Update</Button>
+        {entityType === 'Polygon' && (
+          <>
+            <Button variant="contained" color="primary" onClick={handleSave}>Save</Button>
+            <Button variant="contained" color="secondary" onClick={handleUpdate} disabled={!selectedFeature}>Update</Button>
+          </>
+        )}
         {selectedFeature && (
           <Button variant="contained" color="warning" onClick={handleExportBusinesses}>
-            Export Businesses
+            Export {entityType} Businesses
           </Button>
         )}
       </Box>

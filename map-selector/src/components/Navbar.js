@@ -27,8 +27,9 @@ function Navbar() {
                             </>
                         )}
                         {(user.role === 'admin' || user.role === 'root' || user.role === 'region') && (
-                            <Button color="inherit" component={Link} to="/regions">Regions</Button>
+                            <Button color="inherit" component={Link} to="/wards">Wards</Button>
                         )}
+
 
                         {(user.role === 'admin' || user.role === 'root' || user.role === 'region' || user.role === 'circle') && (
                             <Button color="inherit" component={Link} to="/circles">Circle</Button>

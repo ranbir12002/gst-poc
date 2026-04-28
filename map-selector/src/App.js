@@ -4,11 +4,14 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import LogIn from './pages/LogIn';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
-import Regions from './pages/Regions';
+import Wards from './pages/Wards';
+
 import Circle from './pages/Circle';
 import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
 import CircleDetails from './pages/CircleDetails';
+import SignUp from './pages/SignUp';
+
 import { UserProvider, UserContext } from './context/UserContext';
 
 const ProtectedRoute = ({ children, roles }) => {
@@ -30,6 +33,8 @@ function App() {
     <UserProvider>
       <Routes>
         <Route path="/" element={<LogIn />} />
+        <Route path="/signup" element={<SignUp />} />
+
         <Route element={<Navbar />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route
@@ -41,13 +46,14 @@ function App() {
             }
           />
           <Route
-            path="/regions"
+            path="/wards"
             element={
               <ProtectedRoute roles={['root', 'admin', 'region']}>
-                <Regions />
+                <Wards />
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/circles"
             element={

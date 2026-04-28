@@ -479,42 +479,218 @@
 // export default MapComponent;
 
 import React, { useRef, useEffect, useState, useContext } from 'react';
-import mapboxgl from 'mapbox-gl';
+import maplibregl from 'maplibre-gl';
+
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
+
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
 import { BACKEND_URL, GEOJSON_BACKEND_URL } from '../config';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 
-mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_TOKEN;
+const OSM_STYLE = {
+  version: 8,
+  sources: {
+    'osm': {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap Contributors',
+    },
+  },
+  layers: [
+    {
+      id: 'osm',
+      type: 'raster',
+      source: 'osm',
+    },
+  ],
+};
 
-const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBusinesses, circle }) => {
+
+
+const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBusinesses, circle, wards }) => {
   const mapContainerRef = useRef(null);
   const { user } = useContext(UserContext);
 
   const mapRef = useRef(null);
   const businessMarkersRef = useRef([]);
   const drawRef = useRef(null);
-  const [viewOption, setViewOption] = useState('current');
+  const [viewOption, setViewOption] = useState('wards');
+
   console.log(
     setFeatures, setSelectedFeature, setBusinessInfo, setBusinesses, circle
   )
-  useEffect(() => {
-    const initializeMap = async () => {
-      if (mapRef.current) return;
 
-      const map = new mapboxgl.Map({
+  const fetchBusinesses = async (entity, type = 'polygon') => {
+    try {
+      if (!mapRef.current) return;
+      console.log(`Fetching businesses for ${type}:`, entity);
+
+      // Clear existing business markers
+      businessMarkersRef.current.forEach((marker) => {
+        marker.remove();
+      });
+      businessMarkersRef.current = []; // Clear the array
+
+      let response;
+      if (type === 'ward') {
+        const wardNo = entity.properties.ward_no || entity.ward_no;
+        response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/businesses/by-ward/${wardNo}`);
+      } else if (type === 'circle') {
+        const circleNo = entity.CIRCLE_NO || entity.circle_no || entity.properties?.CIRCLE_NO;
+        response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/businesses/by-circle/${circleNo}`);
+      } else {
+        response = await axios.post(`${GEOJSON_BACKEND_URL}/businesses`, {
+          coordinates: entity.geometry.coordinates[0],
+        });
+      }
+
+      const businesses = response.data.businesses || response.data;
+      setBusinesses(businesses); 
+
+      console.log('Fetched businesses:', businesses.length);
+
+      const geojson = {
+        type: 'FeatureCollection',
+        features: businesses
+          .filter(b => (b.longitude && b.latitude) || (b.location && b.location.coordinates))
+          .map((business) => {
+            const coords = (business.location && business.location.coordinates) 
+              ? business.location.coordinates 
+              : [parseFloat(business.longitude), parseFloat(business.latitude)];
+            
+            return {
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: coords,
+              },
+              properties: {
+                name: business.name,
+                id: business._id,
+              },
+            };
+          }),
+      };
+
+
+      if (mapRef.current.getSource('businesses')) {
+        mapRef.current.removeLayer('clusters');
+        mapRef.current.removeLayer('cluster-count');
+        mapRef.current.removeLayer('unclustered-point');
+        mapRef.current.removeSource('businesses');
+      }
+
+      mapRef.current.addSource('businesses', {
+        type: 'geojson',
+        data: geojson,
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50,
+      });
+
+      mapRef.current.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'businesses',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': '#51bbd6',
+          'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40],
+        },
+      });
+
+      mapRef.current.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'businesses',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': '{point_count_abbreviated}',
+          'text-size': 12,
+        },
+      });
+
+      mapRef.current.addLayer({
+        id: 'unclustered-point',
+        type: 'circle',
+        source: 'businesses',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': '#11b4da',
+          'circle-radius': 10,
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#fff',
+        },
+      });
+
+      mapRef.current.on('click', 'clusters', (e) => {
+        const features = mapRef.current.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+        const clusterId = features[0].properties.cluster_id;
+        mapRef.current.getSource('businesses').getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err) return;
+          mapRef.current.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+        });
+      });
+
+      mapRef.current.on('click', 'unclustered-point', async (e) => {
+        const feature = e.features[0];
+        const businessId = feature.properties.id;
+        const res = await axios.get(`${GEOJSON_BACKEND_URL}/business/${businessId}`);
+        setBusinessInfo(res.data);
+
+        const coordinates = feature.geometry?.coordinates;
+        if (!coordinates || coordinates.length === 0) return;
+
+        const name = feature.properties.name;
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+          coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        new maplibregl.Popup({ offset: [0, -15] })
+          .setLngLat(coordinates)
+          .setHTML(`<h3>${name}</h3>`)
+          .addTo(mapRef.current);
+      });
+
+      mapRef.current.on('mouseenter', 'clusters', () => { mapRef.current.getCanvas().style.cursor = 'pointer'; });
+      mapRef.current.on('mouseleave', 'clusters', () => { mapRef.current.getCanvas().style.cursor = ''; });
+
+    } catch (error) {
+      console.error('Error fetching businesses:', error);
+    }
+  };
+
+  useEffect(() => {
+
+    const initializeMap = async () => {
+      if (mapRef.current || !mapContainerRef.current) return;
+      try {
+
+
+      const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
+        style: OSM_STYLE,
         center: [78.4867, 17.3850],
         zoom: 10,
+        antialias: true
       });
+
+
 
       mapRef.current = map;
 
-      const navControl = new mapboxgl.NavigationControl({
+      // Trigger a resize after a short delay to ensure it fills the container
+      setTimeout(() => {
+        if (mapRef.current) mapRef.current.resize();
+      }, 500);
+
+      const navControl = new maplibregl.NavigationControl({
+
+
         showCompass: false,
       });
       map.addControl(navControl, 'bottom-left');
@@ -530,57 +706,14 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
       drawRef.current = draw;
       map.addControl(draw, 'top-left');
 
-      class ViewOptionsControl {
-        onAdd(map) {
-          this._map = map;
-          this._container = document.createElement('div');
-          this._container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+      // Add a small safety timeout to ensure map is ready before first filter
+      map.on('load', () => {
+        filterCircles();
+      });
 
-          const options = [];
-          if (user.role === 'admin' || user.role === 'root') {
-            options.push(
-              { id: 'viewCurrent', label: 'View Current Circle', value: 'current' },
-              { id: 'viewAll', label: 'View All Circles', value: 'all' },
-              { id: 'viewRegion', label: 'View Region Circles', value: 'region' }
-            );
-          } else if (user.role === 'region') {
-            options.push(
-              { id: 'viewCurrent', label: 'View Current Circle', value: 'current' },
-              { id: 'viewRegion', label: 'View Region Circles', value: 'region' }
-            );
-          } else if (user.role === 'circle') {
-            options.push(
-              { id: 'viewCurrent', label: 'View Current Circle', value: 'current' }
-            );
-          }
-          this._container.innerHTML = `
-            <div style="background: white; padding: 10px; border-radius: 5px;">
-              ${options.map(option => `
-                <div>
-                  <input type="radio" id="${option.id}" name="viewOption" value="${option.value}" ${viewOption === option.value ? 'checked' : ''}>
-                  <label for="${option.id}">${option.label}</label>
-                </div>
-              `).join('')}
-            </div>
-          `;
 
-          this._container.querySelectorAll('input[name="viewOption"]').forEach((input) => {
-            input.addEventListener('change', (e) => {
-              setViewOption(e.target.value);
-            });
-          });
+      // REMOVED: Old ViewOptionsControl class that wasn't responding to React state
 
-          return this._container;
-        }
-
-        onRemove() {
-          this._container.parentNode.removeChild(this._container);
-          this._map = undefined;
-        }
-      }
-
-      const viewOptionsControl = new ViewOptionsControl();
-      map.addControl(viewOptionsControl, 'top-right');
 
       map.on('draw.create', updateFeatures);
       map.on('draw.delete', updateFeatures);
@@ -592,6 +725,12 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
           type: 'geojson',
           data: draw.getAll(),
         });
+
+        // Trigger business fetch for the current circle on load
+        if (circle) {
+          fetchBusinesses(circle, 'circle');
+        }
+
 
         map.addLayer({
           id: 'polygons-fill',
@@ -619,7 +758,8 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
             geometry: circle.geometry,
             properties: {
               _id: circle._id,
-              name: circle.name,
+              name: circle.CIR_NAM_NU || circle.name,
+              CIRCLE_NO: circle.CIRCLE_NO || circle.circle_no,
               color: '#FF0000', // Example color
             },
           };
@@ -633,6 +773,7 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
           if (bounds) {
             map.fitBounds(bounds, { padding: 20 });
           }
+          fetchBusinesses(circle, 'circle');
         }
       });
 
@@ -649,206 +790,6 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
         }
       }
 
-      async function fetchBusinesses(polygon) {
-        try {
-          console.log('Fetching businesses for polygon:', polygon);
-
-          // Clear existing business markers
-          businessMarkersRef.current.forEach((marker) => {
-            marker.remove();
-          });
-          businessMarkersRef.current = []; // Clear the array
-
-          const response = await axios.post(`${GEOJSON_BACKEND_URL}/businesses`, {
-            coordinates: polygon.geometry.coordinates[0],
-          });
-
-          const businesses = response.data;
-          setBusinesses(businesses); // Set businesses to the state in the parent component
-
-          console.log('Fetched businesses:', businesses.length);
-
-          // Convert businesses to GeoJSON format
-          const geojson = {
-            type: 'FeatureCollection',
-            features: businesses.map((business) => ({
-              type: 'Feature',
-              geometry: {
-                type: 'Point',
-                coordinates: business.location.coordinates,
-              },
-              properties: {
-                name: business.name,
-                id: business._id, // Assuming each business has a unique ID
-              },
-            })),
-          };
-
-          // Remove the previous businesses source and layers if they exist
-          if (mapRef.current.getSource('businesses')) {
-            mapRef.current.removeLayer('clusters');
-            mapRef.current.removeLayer('cluster-count');
-            mapRef.current.removeLayer('unclustered-point');
-            mapRef.current.removeSource('businesses');
-          }
-
-          // Add the business data as a source with clustering enabled
-          mapRef.current.addSource('businesses', {
-            type: 'geojson',
-            data: geojson,
-            cluster: true,
-            clusterMaxZoom: 14, // Max zoom to cluster points on
-            clusterRadius: 50, // Radius of each cluster when clustering points
-          });
-
-          // Add a layer to display the clusters
-          mapRef.current.addLayer({
-            id: 'clusters',
-            type: 'circle',
-            source: 'businesses',
-            filter: ['has', 'point_count'],
-            paint: {
-              'circle-color': '#51bbd6',
-              'circle-radius': [
-                'step',
-                ['get', 'point_count'],
-                20,
-                100,
-                30,
-                750,
-                40,
-              ],
-            },
-          });
-
-          // Add a layer to display the cluster count
-          mapRef.current.addLayer({
-            id: 'cluster-count',
-            type: 'symbol',
-            source: 'businesses',
-            filter: ['has', 'point_count'],
-            layout: {
-              'text-field': '{point_count_abbreviated}',
-              'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-              'text-size': 12,
-            },
-          });
-
-          // Add a layer to display individual points
-          mapRef.current.addLayer({
-            id: 'unclustered-point',
-            type: 'circle',
-            source: 'businesses',
-            filter: ['!', ['has', 'point_count']],
-            paint: {
-              'circle-color': '#11b4da',
-              'circle-radius': 10,
-              'circle-stroke-width': 1,
-              'circle-stroke-color': '#fff',
-            },
-          });
-
-          // Inspect a cluster on click
-          mapRef.current.on('click', 'clusters', (e) => {
-            const features = mapRef.current.queryRenderedFeatures(e.point, {
-              layers: ['clusters'],
-            });
-            const clusterId = features[0].properties.cluster_id;
-            mapRef.current.getSource('businesses').getClusterExpansionZoom(clusterId, (err, zoom) => {
-              if (err) return;
-
-              mapRef.current.easeTo({
-                center: features[0].geometry.coordinates,
-                zoom: zoom,
-              });
-            });
-          });
-
-          // When a click event occurs on a feature in the unclustered-point layer, fetch detailed business information.
-          mapRef.current.on('click', 'unclustered-point', async (e) => {
-            try {
-              if (!e.features || e.features.length === 0) {
-                console.error('No features found in the event.');
-                return;
-              }
-
-              const feature = e.features[0];
-              const businessId = feature.properties.id;
-              console.log('Clicked business ID:', businessId);
-              // Fetch business details
-              const response = await axios.get(`${GEOJSON_BACKEND_URL}/business/${businessId}`);
-              const businessDetails = response.data;
-              setBusinessInfo(businessDetails);
-
-              const coordinates = feature.geometry?.coordinates;
-              if (!coordinates || coordinates.length === 0) {
-                console.error('Coordinates are undefined or empty');
-                return;
-              }
-
-              const { name } = feature.properties;
-              console.log('Business coordinates:', coordinates);
-              console.log('Business name:', name);
-
-              while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-              }
-
-              new mapboxgl.Popup()
-                .setLngLat(coordinates)
-                .setHTML(`<strong>${name}</strong>`)
-                .addTo(mapRef.current);
-
-            } catch (error) {
-              console.error('Error handling click event:', error);
-            }
-          });
-
-          mapRef.current.on('mouseenter', 'clusters', () => {
-            mapRef.current.getCanvas().style.cursor = 'pointer';
-          });
-          mapRef.current.on('mouseleave', 'clusters', () => {
-            mapRef.current.getCanvas().style.cursor = '';
-          });
-
-          // Add draggable markers
-          businesses.forEach((business) => {
-            const marker = new mapboxgl.Marker({ draggable: true })
-              .setLngLat(business.location.coordinates)
-              .addTo(map);
-
-            businessMarkersRef.current.push(marker);
-
-            let initialCoordinates = business.location.coordinates;
-
-            marker.on('dragstart', () => {
-              initialCoordinates = marker.getLngLat().toArray();
-            });
-
-            marker.on('dragend', () => {
-              const newCoordinates = marker.getLngLat().toArray();
-              if (!booleanPointInPolygon(newCoordinates, polygon)) {
-                // Revert marker position if it's outside the polygon
-                marker.setLngLat(initialCoordinates);
-                alert('Marker must stay within the polygon.');
-              } else {
-                // Update the marker's position in the state or backend
-                axios.put(`${GEOJSON_BACKEND_URL}/business/${business._id}`, {
-                  coordinates: newCoordinates,
-                }).then(response => {
-                  console.log('Marker position updated:', response.data);
-                }).catch(error => {
-                  console.error('Error updating marker position:', error);
-                });
-              }
-            });
-          });
-
-        } catch (error) {
-          console.error('Error fetching businesses:', error);
-        }
-      }
-
       let clickedOnMarker = false;
 
       map.on('click', 'unclustered-point', (e) => {
@@ -856,17 +797,23 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
       });
 
       map.on('click', (e) => {
+        const wardFeatures = map.queryRenderedFeatures(e.point, { layers: ['wards-fill'] });
+        if (wardFeatures.length > 0) {
+          const ward = wardFeatures[0];
+          console.log('Ward clicked:', ward.properties);
+          setSelectedFeature(ward);
+          fetchBusinesses(ward, 'ward'); 
+          return;
+        }
+
         if (clickedOnMarker) {
           clickedOnMarker = false;
           return;
         }
-        console.log('Map clicked at:', e.point);
 
         const features = map.queryRenderedFeatures(e.point, {
           layers: ['gl-draw-polygon-fill-inactive.cold', 'gl-draw-polygon-fill-active.cold', 'gl-draw-polygon-fill-inactive.hot', 'gl-draw-polygon-fill-active.hot'],
         });
-
-        console.log('Queried features:', features);
 
         if (features.length) {
           const feature = features[0];
@@ -875,69 +822,189 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
           if (featureId) {
             const selectedPolygon = draw.get(featureId);
             if (selectedPolygon) {
-              console.log('clicked on polygon');
-              // Zoom into the polygon
               const bounds = getPolygonBounds(selectedPolygon);
               if (bounds) {
                 mapRef.current.fitBounds(bounds, { padding: 20 });
               }
-
               fetchBusinesses(selectedPolygon);
-              console.log('Fetching businesses for polygon:', selectedPolygon);
-
               setSelectedFeature(selectedPolygon);
-            } else {
-              console.error('No polygon found with the given featureId:', featureId);
             }
-          } else {
-            console.error('Feature does not have a valid id:', feature);
           }
-        } else {
-          console.error('No features found at clicked point');
         }
       });
-    };
+    } catch (error) {
+      console.error('Error in map initialization:', error);
+    }
+  };
 
-    initializeMap();
+  initializeMap();
+
+
   }, [setFeatures, setSelectedFeature, setBusinessInfo, circle]);
 
   useEffect(() => {
+    if (!mapRef.current || !wards || wards.length === 0) return;
+
+    const map = mapRef.current;
+
+    const addWardsLayer = () => {
+      const wardFeatures = {
+        type: 'FeatureCollection',
+        features: wards.map(ward => ({
+          type: 'Feature',
+          geometry: ward.geometry,
+          properties: {
+            _id: ward._id,
+            ward_no: ward.WARD_NO,
+            name: ward.NAME || ward.name,
+            circle_no: ward.CIRCLE_NO,
+            type: 'ward'
+          }
+        }))
+      };
+
+
+      if (map.getSource('wards')) {
+        map.getSource('wards').setData(wardFeatures);
+      } else {
+        map.addSource('wards', {
+          type: 'geojson',
+          data: wardFeatures
+        });
+
+        map.addLayer({
+          id: 'wards-fill',
+          type: 'fill',
+          source: 'wards',
+          paint: {
+            'fill-color': '#00FF00',
+            'fill-opacity': 0.2
+          },
+          layout: {
+            visibility: viewOption === 'wards' ? 'visible' : 'none'
+          }
+        });
+
+
+        map.addLayer({
+          id: 'wards-outline',
+          type: 'line',
+          source: 'wards',
+          paint: {
+            'line-color': '#00AA00',
+            'line-width': 1
+          },
+          layout: {
+            visibility: viewOption === 'wards' ? 'visible' : 'none'
+          }
+        });
+
+
+        // Add labels for wards
+        map.addLayer({
+          id: 'ward-labels',
+          type: 'symbol',
+          source: 'wards',
+          layout: {
+            'text-field': ['concat', 'Ward ', ['get', 'ward_no'], ': ', ['get', 'name']],
+            'text-size': 13,
+            'text-allow-overlap': false
+          },
+
+          paint: {
+            'text-color': '#006600',
+            'text-halo-color': '#FFFFFF',
+            'text-halo-width': 2
+          }
+        });
+
+        // Add click interaction for wards
+        map.on('click', 'wards-fill', (e) => {
+          const feature = e.features[0];
+          
+          // Fetch businesses for this ward
+          fetchBusinesses(feature, 'ward');
+
+          new maplibregl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(`<strong>Ward ${feature.properties.ward_no}</strong><br/>${feature.properties.name}`)
+            .addTo(map);
+        });
+
+
+        map.on('mouseenter', 'wards-fill', () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', 'wards-fill', () => {
+          map.getCanvas().style.cursor = '';
+        });
+      }
+    };
+
+
+    if (map.isStyleLoaded()) {
+      addWardsLayer();
+    } else {
+      map.on('load', addWardsLayer);
+    }
+  }, [wards]);
+
+  useEffect(() => {
     filterCircles();
-    // setBusinesses([])
+    
+    // Toggle Ward layers based on viewOption
+    if (mapRef.current) {
+      const visibility = viewOption === 'wards' ? 'visible' : 'none';
+      if (mapRef.current.getLayer('wards-fill')) {
+        mapRef.current.setLayoutProperty('wards-fill', 'visibility', visibility);
+        mapRef.current.setLayoutProperty('wards-outline', 'visibility', visibility);
+        mapRef.current.setLayoutProperty('ward-labels', 'visibility', visibility);
+      }
+    }
   }, [viewOption]);
 
+
   const filterCircles = async () => {
-    const draw = drawRef.current;
-    if (!mapRef.current.getSource('drawnPolygons')) {
+    if (!mapRef.current || !mapRef.current.getSource('drawnPolygons')) {
       return;
     }
+    const draw = drawRef.current;
+
 
     let features = [];
 
-    if (viewOption === 'current' && circle) {
+    if (viewOption === 'current' && circle && circle.geometry) {
       const feature = {
         type: 'Feature',
         geometry: circle.geometry,
         properties: {
           _id: circle._id,
-          name: circle.name,
+          name: circle.CIR_NAM_NU || circle.name,
           color: '#FF0000', // Example color
         },
       };
       features = [feature];
+
     } else if (viewOption === 'all') {
       try {
-        const response = await axios.get(`${GEOJSON_BACKEND_URL}/polygons`);
-        features = response.data.map(polygon => ({
-          ...polygon,
+        const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles`);
+        // The API returns { circles: [...], total: ... }
+        const circlesData = response.data.circles || [];
+        features = circlesData.map(circle => ({
+          type: 'Feature',
+          geometry: circle.geometry,
           properties: {
-            ...polygon.properties,
+            _id: circle._id,
+            name: circle.CIR_NAM_NU || circle.name,
+            circle_no: circle.CIRCLE_NO,
             color: getRandomColor(), // Add random color property
           },
         }));
       } catch (error) {
         console.error('Error fetching all circles:', error);
       }
+
+
     } else if (viewOption === 'region' && circle.region) {
       try {
         const response = await axios.get(`${BACKEND_URL}/api/circles/${circle._id}/related-circles`, {
@@ -971,7 +1038,8 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
     }
     const bounds = coordinates.reduce((bounds, coord) => {
       return bounds.extend(coord);
-    }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
+    }, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+
     return bounds;
   }
 
@@ -985,10 +1053,43 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
   }
 
   return (
-    <div style={{ height: '100%', width: '100%' }}>
-      <div ref={mapContainerRef} className="map-container" style={{ height: '100%', width: '100%' }} />
+    <div style={{ height: '100%', width: '100%', minHeight: '500px', position: 'relative', border: '1px solid #ccc' }}>
+      {/* React View Toggle Overlay */}
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        zIndex: 1000,
+        backgroundColor: 'white',
+        padding: '10px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '5px'
+      }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '12px', color: '#666' }}>VIEW OPTIONS</div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+          <input type="radio" name="view" value="current" checked={viewOption === 'current'} onChange={(e) => setViewOption(e.target.value)} />
+          View Circle
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+          <input type="radio" name="view" value="wards" checked={viewOption === 'wards'} onChange={(e) => setViewOption(e.target.value)} />
+          View Wards
+        </label>
+        {(user.role === 'admin' || user.role === 'root') && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+            <input type="radio" name="view" value="all" checked={viewOption === 'all'} onChange={(e) => setViewOption(e.target.value)} />
+            View All Circles
+          </label>
+        )}
+      </div>
+
+      <div ref={mapContainerRef} className="map-container" style={{ height: '100%', width: '100%', position: 'absolute', top: 0, bottom: 0 }} />
     </div>
   );
+
+
 };
 
 export default MapComponent;

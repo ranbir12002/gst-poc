@@ -1,6 +1,7 @@
 // src/pages/LogIn.js
 import React, { useContext, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+
 import { Container, Box, Typography, TextField, Button, CssBaseline, Alert } from '@mui/material';
 import axios from 'axios';
 import headerLogo from '../assets/logo.png';
@@ -60,6 +61,12 @@ function LogIn() {
                     />
                     {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
                     <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>Log In</Button>
+                    <Link to="/signup" style={{ textDecoration: 'none' }}>
+                        <Typography variant="body2" color="primary" align="center">
+                            Don't have an account? Sign Up
+                        </Typography>
+                    </Link>
+
                 </Box>
             </Box>
             <Box sx={{ mt: 'auto', mb: 2, textAlign: 'center' }}>

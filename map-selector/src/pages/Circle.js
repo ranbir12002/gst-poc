@@ -751,7 +751,7 @@ import DrawIcon from '@mui/icons-material/Draw';
 import SearchIcon from '@mui/icons-material/Search';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
-import { BACKEND_URL } from '../config';
+import { BACKEND_URL, GEOJSON_BACKEND_URL } from '../config';
 
 function Circles() {
     const { user } = useContext(UserContext);
@@ -775,7 +775,7 @@ function Circles() {
 
     const fetchCircles = async (page, search) => {
         try {
-            const response = await axios.get(`${BACKEND_URL}/api/circles`, {
+            const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles`, {
                 params: { page, limit: 10, search },
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -965,9 +965,8 @@ function Circles() {
                         <TableRow>
                             <TableCell>S.No</TableCell>
                             <TableCell>Circle Name</TableCell>
+                            <TableCell>Circle No</TableCell>
                             <TableCell>Assigned Employee</TableCell>
-                            <TableCell>Number of Business</TableCell>
-                            <TableCell>Region Name</TableCell>
                             <TableCell>Status</TableCell>
                             <TableCell>Actions</TableCell>
                         </TableRow>
@@ -976,7 +975,8 @@ function Circles() {
                         {circles.map((circle, index) => (
                             <TableRow key={circle._id}>
                                 <TableCell>{(page - 1) * 10 + index + 1}</TableCell>
-                                <TableCell>{circle?.name}</TableCell>
+                                <TableCell>{circle?.CIR_NAM_NU || circle?.name}</TableCell>
+                                <TableCell>{circle?.CIRCLE_NO}</TableCell>
                                 <TableCell>
                                     {circle?.users?.length > 0 ? (
                                         circle?.users?.map(user => (
@@ -988,9 +988,8 @@ function Circles() {
                                         'No assigned employees'
                                     )}
                                 </TableCell>
-                                <TableCell>{circle?.numberOfBusiness}</TableCell>
-                                <TableCell>{circle?.region?.name}</TableCell>
-                                <TableCell>{circle?.status}</TableCell>
+                                <TableCell>{circle?.status || 'Active'}</TableCell>
+
                                 <TableCell>
                                     <IconButton color="primary" onClick={() => handleEditClick(circle)}>
                                         <EditIcon />

@@ -1,22 +1,19 @@
 const mongoose = require('mongoose');
 
 const CircleSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  region: { type: mongoose.Schema.Types.ObjectId, ref: 'Region' },
-  type: { type: String, default: "Feature" },
+  CIRCLE_NO: { type: Number, required: true, unique: true },
+  CIR_NAM_NU: { type: String, required: true },
+  Zone_Name: { type: String },
+  CORPORATE: { type: String },
+  ward_count: { type: Number, default: 0 },
+  ward_names: [String],
+  ward_numbers: [Number],
   geometry: {
-    type: {
-      type: String,
-      enum: ['Polygon', 'MultiPolygon'],
-    },
-    coordinates: {
-      type: [[[Number]]], // Array of array of arrays of numbers
-    }
+    type: { type: String, enum: ['Polygon', 'MultiPolygon'], required: true },
+    coordinates: { type: mongoose.Schema.Types.Mixed, required: true }
   },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-  properties: {
-    description: String
-  }
+  business_count: { type: Number, default: 0 },
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' }
 }, { timestamps: true });
 
 CircleSchema.index({ geometry: '2dsphere' });
