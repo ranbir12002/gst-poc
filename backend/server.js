@@ -25,7 +25,27 @@ app.use('/', require('./routes/v2'));
 
 const PORT = process.env.PORT || 5000;
 
+// Serve static assets in production
+const path = require('path');
+// Check if we are in production or if the build folder exists
+if (process.env.NODE_ENV === 'production') {
+  // Serve the static files from the React app build folder
+  app.use(express.static(path.join(__dirname, '../map-selector/build')));
+
+  // The "catchall" handler: for any request that doesn't
+  // match one above, send back React's index.html file.
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../map-selector', 'build', 'index.html'));
+  });
+} else {
+  // Basic health check for dev
+  app.get('/', (req, res) => {
+    res.send('GST POC Backend API is running...');
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 
