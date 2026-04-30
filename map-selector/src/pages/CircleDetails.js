@@ -33,6 +33,21 @@ const CircleDetails = () => {
     }
   }, [circle]);
 
+  useEffect(() => {
+    const fetchBusinesses = async () => {
+      try {
+        const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles/${circle._id}/businesses?limit=200`);
+        setBusinesses(response.data.businesses);
+      } catch (error) {
+        console.error('Error fetching circle businesses:', error);
+      }
+    };
+    if (circle && circle._id) {
+      fetchBusinesses();
+    }
+  }, [circle]);
+
+
   const updateSelectedFeature = (updatedFeature) => {
     setSelectedFeature(updatedFeature);
     setFeatures((prevFeatures) =>
@@ -94,9 +109,11 @@ const CircleDetails = () => {
               setSelectedFeature={setSelectedFeature}
               setBusinessInfo={setBusinessInfo}
               setBusinesses={setBusinesses}
+              businesses={businesses}
               circle={circle} // Pass the circle data as a prop
               wards={wards} // Pass the wards belonging to this circle
             />
+
             <Button className={`sidebar-toggle ${sidebarOpen ? 'open' : 'close'}`} onClick={() => setSidebarOpen(prev => !prev)}>
               <i className={`fas ${sidebarOpen ? 'fa-chevron-right' : 'fa-chevron-left'}`}></i>
             </Button>

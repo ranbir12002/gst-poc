@@ -1,1090 +1,183 @@
-// import React, { useState, useEffect, useContext } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { Container, Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
-// import EditIcon from '@mui/icons-material/Edit';
-// import DeleteIcon from '@mui/icons-material/Delete';
-// import DrawIcon from '@mui/icons-material/Draw';
-// import axios from 'axios';
-// import { UserContext } from '../context/UserContext';
-
-// function Circles() {
-//     const { user } = useContext(UserContext);
-
-//     const [open, setOpen] = useState(false);
-//     const [editingCircle, setEditingCircle] = useState(null);
-//     const [circleName, setCircleName] = useState('');
-//     const [circles, setCircles] = useState([]);
-//     const navigate = useNavigate();
-
-//     useEffect(() => {
-//         fetchCircles();
-//     }, []);
-
-//     const fetchCircles = async () => {
-//         try {
-//             const response = await axios.get('/api/circles', {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             if (user.role !== 'admin' && user.role !== 'root') {
-//                 const filteredCircles = response.data.filter(circle => user.circle.includes(circle._id));
-//                 setCircles(filteredCircles);
-//             } else {
-//                 setCircles(response.data);
-//             }
-
-//         } catch (error) {
-//             console.error('Error fetching circles:', error);
-//         }
-//     };
-
-//     const handleClickOpen = (circle) => {
-//         console.log(circle)
-//         if (circle) {
-//             setEditingCircle(circle);
-//             setCircleName(circle.name);
-//         } else {
-//             setEditingCircle(null);
-//             setCircleName('');
-//         }
-//         setOpen(true);
-//     };
-
-//     const handleClose = () => {
-//         setOpen(false);
-//     };
-
-//     const handleCreateOrUpdate = async () => {
-//         if (editingCircle) {
-//             try {
-//                 const response = await axios.put(`/api/circles/${editingCircle._id}`, { name: circleName }, {
-//                     headers: {
-//                         Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                     },
-//                 });
-//                 const updatedCircles = circles.map(circle =>
-//                     circle._id === editingCircle._id ? response.data : circle
-//                 );
-//                 setCircles(updatedCircles);
-//             } catch (error) {
-//                 console.error('Error updating circle:', error);
-//             }
-//         } else {
-//             try {
-//                 const response = await axios.post('/api/circles', { name: circleName }, {
-//                     headers: {
-//                         Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                     },
-//                 });
-//                 setCircles([...circles, response.data]);
-//             } catch (error) {
-//                 console.error('Error creating circle:', error);
-//             }
-//         }
-//         handleClose();
-//     };
-
-//     const handleEditClick = (circle) => {
-//         handleClickOpen(circle);
-//     };
-
-//     const handleDeleteClick = async (id) => {
-//         try {
-//             await axios.delete(`/api/circles/${id}`, {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 }
-//             })
-
-//             const updatedCircles = circles.filter(circle => circle._id !== id);
-//             setCircles(updatedCircles);
-//         } catch (error) {
-//             console.error('Error deleting circle:', error);
-//         }
-//     };
-
-//     const handleDrawClick = (circle) => {
-//         navigate(`/circles/${circle._id}`, { state: { circle } });
-//     };
-
-//     return (
-//         <Container>
-//             <Box sx={{ mt: 4, mb: 2, textAlign: 'right' }}>
-//                 <Button variant="contained" color="primary" onClick={() => handleClickOpen(null)}>Create Circle</Button>
-//             </Box>
-//             <TableContainer component={Paper}>
-//                 <Table>
-//                     <TableHead>
-//                         <TableRow>
-//                             <TableCell>S.No</TableCell>
-//                             <TableCell>Circle Name</TableCell>
-//                             <TableCell>Assigned Employee</TableCell>
-//                             <TableCell>Number of Business</TableCell>
-//                             <TableCell>Region Name</TableCell>
-//                             <TableCell>Status</TableCell>
-//                             <TableCell>Actions</TableCell>
-//                         </TableRow>
-//                     </TableHead>
-//                     <TableBody>
-//                         {circles.map((circle, index) => (
-//                             <TableRow key={circle._id}>
-//                                 <TableCell>{index + 1}</TableCell>
-//                                 <TableCell>{circle?.name}</TableCell>
-//                                 <TableCell>{circle?.assignedEmployee}</TableCell>
-//                                 <TableCell>{circle?.numberOfBusiness}</TableCell>
-//                                 <TableCell>{circle?.region?.name}</TableCell>
-//                                 <TableCell>{circle?.status}</TableCell>
-
-//                                 <TableCell>
-//                                     <IconButton color="primary" onClick={() => handleEditClick(circle)}>
-//                                         <EditIcon />
-//                                     </IconButton>
-//                                     <IconButton color="secondary" onClick={() => handleDeleteClick(circle._id)}>
-//                                         <DeleteIcon />
-//                                     </IconButton>
-//                                     <IconButton color="default" onClick={() => handleDrawClick(circle)}>
-//                                         <DrawIcon />
-//                                     </IconButton>
-//                                 </TableCell>
-//                             </TableRow>
-//                         ))}
-//                     </TableBody>
-//                 </Table>
-//             </TableContainer>
-
-//             <Dialog open={open} onClose={handleClose}>
-//                 <DialogTitle>{editingCircle ? 'Edit Circle' : 'Create Circle'}</DialogTitle>
-//                 <DialogContent>
-//                     <TextField autoFocus margin="dense" id="circleName" label="Circle Name" type="text" fullWidth variant="outlined" value={circleName} onChange={(e) => setCircleName(e.target.value)} />
-//                 </DialogContent>
-//                 <DialogActions>
-//                     <Button onClick={handleClose}>Cancel</Button>
-//                     <Button onClick={handleCreateOrUpdate}>{editingCircle ? 'Update' : 'Create'}</Button>
-//                 </DialogActions>
-//             </Dialog>
-//         </Container>
-//     );
-// }
-
-// export default Circles;
-
-// import React, { useState, useEffect, useContext } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { Container, Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Select, MenuItem } from '@mui/material';
-// import EditIcon from '@mui/icons-material/Edit';
-// import DeleteIcon from '@mui/icons-material/Delete';
-// import DrawIcon from '@mui/icons-material/Draw';
-// import axios from 'axios';
-// import { UserContext } from '../context/UserContext';
-
-// function Circles() {
-//     const { user } = useContext(UserContext);
-//     const [open, setOpen] = useState(false);
-//     const [editingCircle, setEditingCircle] = useState(null);
-//     const [circleName, setCircleName] = useState('');
-//     const [selectedRegion, setSelectedRegion] = useState('');
-//     const [circles, setCircles] = useState([]);
-//     const [regions, setRegions] = useState([]);
-//     const [pendingRevisions, setPendingRevisions] = useState([]);
-//     const navigate = useNavigate();
-
-//     useEffect(() => {
-//         fetchCircles();
-//         fetchPendingRevisions();
-//         fetchRegions();
-//     }, []);
-
-//     const fetchCircles = async () => {
-//         try {
-//             const response = await axios.get('/api/circles', {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             if (user.role !== 'admin' && user.role !== 'root') {
-//                 const filteredCircles = response.data.filter(circle => user.circle.includes(circle._id));
-//                 setCircles(filteredCircles);
-//             } else {
-//                 setCircles(response.data);
-//             }
-//         } catch (error) {
-//             console.error('Error fetching circles:', error);
-//         }
-//     };
-
-//     const fetchPendingRevisions = async () => {
-//         try {
-//             const response = await axios.get('/api/circles/revised-circles', {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             setPendingRevisions(response.data);
-//         } catch (error) {
-//             console.error('Error fetching pending revisions:', error);
-//         }
-//     };
-
-//     const fetchRegions = async () => {
-//         try {
-//             const response = await axios.get('/api/regions', {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             setRegions(response.data);
-//         } catch (error) {
-//             console.error('Error fetching regions:', error);
-//         }
-//     };
-
-//     const handleClickOpen = (circle) => {
-//         if (circle) {
-//             setEditingCircle(circle);
-//             setCircleName(circle.name);
-//             setSelectedRegion(circle.region ? circle.region._id : '');
-//         } else {
-//             setEditingCircle(null);
-//             setCircleName('');
-//             setSelectedRegion('');
-//         }
-//         setOpen(true);
-//     };
-
-//     const handleClose = () => {
-//         setOpen(false);
-//     };
-
-//     const handleCreateOrUpdate = async () => {
-//         const circleData = {
-//             name: circleName,
-//             region: selectedRegion
-//         };
-
-//         if (editingCircle) {
-//             try {
-//                 const response = await axios.put(`/api/circles/${editingCircle._id}`, circleData, {
-//                     headers: {
-//                         Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                     },
-//                 });
-//                 const updatedCircles = circles.map(circle =>
-//                     circle._id === editingCircle._id ? response.data : circle
-//                 );
-//                 setCircles(updatedCircles);
-//             } catch (error) {
-//                 console.error('Error updating circle:', error);
-//             }
-//         } else {
-//             try {
-//                 const response = await axios.post('/api/circles', circleData, {
-//                     headers: {
-//                         Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                     },
-//                 });
-//                 setCircles([...circles, response.data]);
-//             } catch (error) {
-//                 console.error('Error creating circle:', error);
-//             }
-//         }
-//         handleClose();
-//     };
-
-//     const handleEditClick = (circle) => {
-//         handleClickOpen(circle);
-//     };
-
-//     const handleDeleteClick = async (id) => {
-//         try {
-//             await axios.delete(`/api/circles/${id}`, {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 }
-//             });
-//             const updatedCircles = circles.filter(circle => circle._id !== id);
-//             setCircles(updatedCircles);
-//         } catch (error) {
-//             console.error('Error deleting circle:', error);
-//         }
-//     };
-
-//     const handleDrawClick = (circle) => {
-//         navigate(`/circles/${circle._id}`, { state: { circle } });
-//     };
-
-//     const handleApproveByRegion = async (id) => {
-//         try {
-//             await axios.put(`/api/circles/revised-circles/region/${id}`, null, {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             fetchPendingRevisions();
-//         } catch (error) {
-//             console.error('Error approving revision by region:', error);
-//         }
-//     };
-
-//     const handleApproveByAdmin = async (id) => {
-//         try {
-//             await axios.put(`/api/circles/revised-circles/admin/${id}`, null, {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             fetchPendingRevisions();
-//         } catch (error) {
-//             console.error('Error approving revision by admin:', error);
-//         }
-//     };
-
-//     return (
-//         <Container>
-//             <Box sx={{ mt: 4, mb: 2, textAlign: 'right' }}>
-//                 <Button variant="contained" color="primary" onClick={() => handleClickOpen(null)}>Create Circle</Button>
-//             </Box>
-//             <TableContainer component={Paper}>
-//                 <Table>
-//                     <TableHead>
-//                         <TableRow>
-//                             <TableCell>S.No</TableCell>
-//                             <TableCell>Circle Name</TableCell>
-//                             <TableCell>Assigned Employee</TableCell>
-//                             <TableCell>Number of Business</TableCell>
-//                             <TableCell>Region Name</TableCell>
-//                             <TableCell>Status</TableCell>
-//                             <TableCell>Actions</TableCell>
-//                         </TableRow>
-//                     </TableHead>
-//                     <TableBody>
-//                         {circles.map((circle, index) => (
-//                             <TableRow key={circle._id}>
-//                                 <TableCell>{index + 1}</TableCell>
-//                                 <TableCell>{circle?.name}</TableCell>
-//                                 <TableCell>{circle?.assignedEmployee}</TableCell>
-//                                 <TableCell>{circle?.numberOfBusiness}</TableCell>
-//                                 <TableCell>{circle?.region?.name}</TableCell>
-//                                 <TableCell>{circle?.status}</TableCell>
-//                                 <TableCell>
-//                                     <IconButton color="primary" onClick={() => handleEditClick(circle)}>
-//                                         <EditIcon />
-//                                     </IconButton>
-//                                     <IconButton color="secondary" onClick={() => handleDeleteClick(circle._id)}>
-//                                         <DeleteIcon />
-//                                     </IconButton>
-//                                     <IconButton color="default" onClick={() => handleDrawClick(circle)}>
-//                                         <DrawIcon />
-//                                     </IconButton>
-//                                 </TableCell>
-//                             </TableRow>
-//                         ))}
-//                         {pendingRevisions?.map((revision, index) => (
-//                             <TableRow key={revision?._id}>
-//                                 <TableCell>{index + 1}</TableCell>
-//                                 <TableCell>{revision?.name}</TableCell>
-//                                 <TableCell>{revision?.assignedEmployee}</TableCell>
-//                                 <TableCell>{revision?.numberOfBusiness}</TableCell>
-//                                 <TableCell>{revision?.region?.name}</TableCell>
-//                                 <TableCell>{revision?.status}</TableCell>
-//                                 <TableCell>
-//                                     {user.role === 'region' && revision.status === 'pending' && (
-//                                         <Button onClick={() => handleApproveByRegion(revision._id)}>Approve</Button>
-//                                     )}
-//                                     {user.role === 'admin' && revision.status === 'regionApproved' && (
-//                                         <Button onClick={() => handleApproveByAdmin(revision._id)}>Approve</Button>
-//                                     )}
-//                                 </TableCell>
-//                             </TableRow>
-//                         ))}
-//                     </TableBody>
-//                 </Table>
-//             </TableContainer>
-
-//             <Dialog open={open} onClose={handleClose}>
-//                 <DialogTitle>{editingCircle ? 'Edit Circle' : 'Create Circle'}</DialogTitle>
-//                 <DialogContent>
-//                     <TextField autoFocus margin="dense" id="circleName" label="Circle Name" type="text" fullWidth variant="outlined" value={circleName} onChange={(e) => setCircleName(e.target.value)} />
-//                     <Select
-//                         margin="dense"
-//                         id="region"
-//                         label="Select Region"
-//                         value={selectedRegion}
-//                         onChange={(e) => setSelectedRegion(e.target.value)}
-//                         fullWidth
-//                         variant="outlined"
-//                         sx={{ mt: 2 }}
-//                     >
-//                         {regions.map((region) => (
-//                             <MenuItem key={region._id} value={region._id}>
-//                                 {region.name}
-//                             </MenuItem>
-//                         ))}
-//                     </Select>
-//                 </DialogContent>
-//                 <DialogActions>
-//                     <Button onClick={handleClose}>Cancel</Button>
-//                     <Button onClick={handleCreateOrUpdate}>{editingCircle ? 'Update' : 'Create'}</Button>
-//                 </DialogActions>
-//             </Dialog>
-//         </Container>
-//     );
-// }
-
-// export default Circles;
-
-// import React, { useState, useEffect, useContext } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { Container, Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Select, MenuItem } from '@mui/material';
-// import EditIcon from '@mui/icons-material/Edit';
-// import DeleteIcon from '@mui/icons-material/Delete';
-// import DrawIcon from '@mui/icons-material/Draw';
-// import axios from 'axios';
-// import { UserContext } from '../context/UserContext';
-
-// function Circles() {
-//     const { user } = useContext(UserContext);
-//     const [open, setOpen] = useState(false);
-//     const [openRevisions, setOpenRevisions] = useState(false);
-//     const [editingCircle, setEditingCircle] = useState(null);
-//     const [circleName, setCircleName] = useState('');
-//     const [selectedRegion, setSelectedRegion] = useState('');
-//     const [circles, setCircles] = useState([]);
-//     const [regions, setRegions] = useState([]);
-//     const [pendingRevisions, setPendingRevisions] = useState([]);
-//     const navigate = useNavigate();
-
-//     useEffect(() => {
-//         fetchCircles();
-//         fetchRegions();
-//     }, []);
-
-//     const fetchCircles = async () => {
-//         try {
-//             const response = await axios.get('/api/circles', {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             if (user.role !== 'admin' && user.role !== 'root') {
-//                 const filteredCircles = response.data.filter(circle => user.circle.includes(circle._id));
-//                 setCircles(filteredCircles);
-//             } else {
-//                 setCircles(response.data);
-//             }
-//         } catch (error) {
-//             console.error('Error fetching circles:', error);
-//         }
-//     };
-
-//     const fetchPendingRevisions = async () => {
-//         try {
-//             const response = await axios.get('/api/circles/revised-circles', {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             setPendingRevisions(response.data);
-//         } catch (error) {
-//             console.error('Error fetching pending revisions:', error);
-//         }
-//     };
-
-//     const fetchRegions = async () => {
-//         try {
-//             const response = await axios.get('/api/regions', {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             setRegions(response.data);
-//         } catch (error) {
-//             console.error('Error fetching regions:', error);
-//         }
-//     };
-
-//     const handleClickOpen = (circle) => {
-//         if (circle) {
-//             setEditingCircle(circle);
-//             setCircleName(circle.name);
-//             setSelectedRegion(circle.region ? circle.region._id : '');
-//         } else {
-//             setEditingCircle(null);
-//             setCircleName('');
-//             setSelectedRegion('');
-//         }
-//         setOpen(true);
-//     };
-
-//     const handleClose = () => {
-//         setOpen(false);
-//     };
-
-//     const handleCreateOrUpdate = async () => {
-//         const circleData = {
-//             name: circleName,
-//             region: selectedRegion
-//         };
-
-//         if (editingCircle) {
-//             try {
-//                 const response = await axios.put(`/api/circles/${editingCircle._id}`, circleData, {
-//                     headers: {
-//                         Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                     },
-//                 });
-//                 const updatedCircles = circles.map(circle =>
-//                     circle._id === editingCircle._id ? response.data : circle
-//                 );
-//                 setCircles(updatedCircles);
-//             } catch (error) {
-//                 console.error('Error updating circle:', error);
-//             }
-//         } else {
-//             try {
-//                 const response = await axios.post('/api/circles', circleData, {
-//                     headers: {
-//                         Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                     },
-//                 });
-//                 setCircles([...circles, response.data]);
-//             } catch (error) {
-//                 console.error('Error creating circle:', error);
-//             }
-//         }
-//         handleClose();
-//     };
-
-//     const handleEditClick = (circle) => {
-//         handleClickOpen(circle);
-//     };
-
-//     const handleDeleteClick = async (id) => {
-//         try {
-//             await axios.delete(`/api/circles/${id}`, {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 }
-//             });
-//             const updatedCircles = circles.filter(circle => circle._id !== id);
-//             setCircles(updatedCircles);
-//         } catch (error) {
-//             console.error('Error deleting circle:', error);
-//         }
-//     };
-
-//     const handleDrawClick = (circle) => {
-//         navigate(`/circles/${circle._id}`, { state: { circle } });
-//     };
-
-//     const handleApproveByRegion = async (id) => {
-//         try {
-//             await axios.put(`/api/circles/revised-circles/region/${id}`, null, {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             fetchPendingRevisions();
-//         } catch (error) {
-//             console.error('Error approving revision by region:', error);
-//         }
-//     };
-
-//     const handleApproveByAdmin = async (id) => {
-//         try {
-//             await axios.put(`/api/circles/revised-circles/admin/${id}`, null, {
-//                 headers: {
-//                     Authorization: `Bearer ${localStorage.getItem('token')}`,
-//                 },
-//             });
-//             fetchPendingRevisions();
-//         } catch (error) {
-//             console.error('Error approving revision by admin:', error);
-//         }
-//     };
-
-//     const handleOpenRevisions = () => {
-//         fetchPendingRevisions();
-//         setOpenRevisions(true);
-//     };
-
-//     const handleCloseRevisions = () => {
-//         setOpenRevisions(false);
-//     };
-
-//     return (
-//         <Container>
-//             <Box sx={{ mt: 4, mb: 2, textAlign: 'right' }}>
-//                 <Button variant="contained" color="primary" onClick={() => handleClickOpen(null)}>Create Circle</Button>
-//                 <Button variant="contained" color="secondary" onClick={handleOpenRevisions} sx={{ ml: 2 }}>Show Revisions</Button>
-//             </Box>
-//             <TableContainer component={Paper}>
-//                 <Table>
-//                     <TableHead>
-//                         <TableRow>
-//                             <TableCell>S.No</TableCell>
-//                             <TableCell>Circle Name</TableCell>
-//                             <TableCell>Assigned Employee</TableCell>
-//                             <TableCell>Number of Business</TableCell>
-//                             <TableCell>Region Name</TableCell>
-//                             <TableCell>Status</TableCell>
-//                             <TableCell>Actions</TableCell>
-//                         </TableRow>
-//                     </TableHead>
-//                     <TableBody>
-//                         {circles.map((circle, index) => (
-//                             <TableRow key={circle._id}>
-//                                 <TableCell>{index + 1}</TableCell>
-//                                 <TableCell>{circle?.name}</TableCell>
-//                                 <TableCell>
-//                                     {circle?.users?.length > 0 ? (
-//                                         circle?.users?.map(user => (
-//                                             <div key={user._id}>
-//                                                 {user.username} ({user.role})
-//                                             </div>
-//                                         )).reduce((prev, curr) => [prev, ', ', curr])
-//                                     ) : (
-//                                         'No assigned employees'
-//                                     )}
-//                                 </TableCell>
-//                                 <TableCell>{circle?.numberOfBusiness}</TableCell>
-//                                 <TableCell>{circle?.region?.name}</TableCell>
-//                                 <TableCell>{circle?.status}</TableCell>
-//                                 <TableCell>
-//                                     <IconButton color="primary" onClick={() => handleEditClick(circle)}>
-//                                         <EditIcon />
-//                                     </IconButton>
-//                                     <IconButton color="secondary" onClick={() => handleDeleteClick(circle._id)}>
-//                                         <DeleteIcon />
-//                                     </IconButton>
-//                                     <IconButton color="default" onClick={() => handleDrawClick(circle)}>
-//                                         <DrawIcon />
-//                                     </IconButton>
-//                                 </TableCell>
-//                             </TableRow>
-//                         ))}
-//                     </TableBody>
-//                 </Table>
-//             </TableContainer>
-
-//             <Dialog open={open} onClose={handleClose}>
-//                 <DialogTitle>{editingCircle ? 'Edit Circle' : 'Create Circle'}</DialogTitle>
-//                 <DialogContent>
-//                     <TextField autoFocus margin="dense" id="circleName" label="Circle Name" type="text" fullWidth variant="outlined" value={circleName} onChange={(e) => setCircleName(e.target.value)} />
-//                     <Select
-//                         margin="dense"
-//                         id="region"
-//                         label="Select Region"
-//                         value={selectedRegion}
-//                         onChange={(e) => setSelectedRegion(e.target.value)}
-//                         fullWidth
-//                         variant="outlined"
-//                         sx={{ mt: 2 }}
-//                     >
-//                         {regions.map((region) => (
-//                             <MenuItem key={region._id} value={region._id}>
-//                                 {region.name}
-//                             </MenuItem>
-//                         ))}
-//                     </Select>
-//                 </DialogContent>
-//                 <DialogActions>
-//                     <Button onClick={handleClose}>Cancel</Button>
-//                     <Button onClick={handleCreateOrUpdate}>{editingCircle ? 'Update' : 'Create'}</Button>
-//                 </DialogActions>
-//             </Dialog>
-
-//             <Dialog open={openRevisions} onClose={handleCloseRevisions}>
-//                 <DialogTitle>Pending Revisions</DialogTitle>
-//                 <DialogContent>
-//                     <TableContainer component={Paper}>
-//                         <Table>
-//                             <TableHead>
-//                                 <TableRow>
-//                                     <TableCell>S.No</TableCell>
-//                                     <TableCell>Circle Name</TableCell>
-//                                     <TableCell>Assigned Employee</TableCell>
-//                                     <TableCell>Number of Business</TableCell>
-//                                     <TableCell>Region Name</TableCell>
-//                                     <TableCell>Status</TableCell>
-//                                     <TableCell>Actions</TableCell>
-//                                 </TableRow>
-//                             </TableHead>
-//                             <TableBody>
-//                                 {pendingRevisions.map((revision, index) => (
-//                                     <TableRow key={revision._id}>
-//                                         <TableCell>{index + 1}</TableCell>
-//                                         <TableCell>{revision.name}</TableCell>
-//                                         <TableCell>{revision.assignedEmployee}</TableCell>
-//                                         <TableCell>{revision.numberOfBusiness}</TableCell>
-//                                         <TableCell>{revision.region?.name}</TableCell>
-//                                         <TableCell>{revision.status}</TableCell>
-//                                         <TableCell>
-//                                             {user.role === 'region' && revision.status === 'pending' && (
-//                                                 <Button onClick={() => handleApproveByRegion(revision._id)}>Approve</Button>
-//                                             )}
-//                                             {user.role === 'admin' || user.role === 'root' && revision.status === 'regionApproved' && (
-//                                                 <Button onClick={() => handleApproveByAdmin(revision._id)}>Approve</Button>
-//                                             )}
-//                                         </TableCell>
-//                                     </TableRow>
-//                                 ))}
-//                             </TableBody>
-//                         </Table>
-//                     </TableContainer>
-//                 </DialogContent>
-//                 <DialogActions>
-//                     <Button onClick={handleCloseRevisions}>Close</Button>
-//                 </DialogActions>
-//             </Dialog>
-//         </Container>
-//     );
-// }
-
-// export default Circles;
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Select, MenuItem, Pagination, Stack } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DrawIcon from '@mui/icons-material/Draw';
+import {
+  Container, Box, Typography, TextField, InputAdornment,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Paper, Button, Chip, Pagination, CircularProgress, IconButton, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
+} from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
-import { BACKEND_URL, GEOJSON_BACKEND_URL } from '../config';
+import { GEOJSON_BACKEND_URL } from '../config';
 
 function Circles() {
-    const { user } = useContext(UserContext);
-    const [open, setOpen] = useState(false);
-    const [openRevisions, setOpenRevisions] = useState(false);
-    const [editingCircle, setEditingCircle] = useState(null);
-    const [circleName, setCircleName] = useState('');
-    const [selectedRegion, setSelectedRegion] = useState('');
-    const [circles, setCircles] = useState([]);
-    const [regions, setRegions] = useState([]);
-    const [pendingRevisions, setPendingRevisions] = useState([]);
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [search, setSearch] = useState('');
-    const navigate = useNavigate();
+  const { user } = useContext(UserContext);
+  const navigate = useNavigate();
+  const [circles, setCircles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, circle: null });
 
-    useEffect(() => {
-        fetchCircles(page, search);
-        fetchRegions();
-    }, [page, search]);
+  useEffect(() => {
+    fetchCircles();
+  }, [page, search]);
 
-    const fetchCircles = async (page, search) => {
-        try {
-            const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles`, {
-                params: { page, limit: 10, search },
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            });
-            if (user.role !== 'admin' && user.role !== 'root') {
-                const filteredCircles = response.data.circles.filter(circle => user.circle.includes(circle._id));
-                setCircles(filteredCircles);
-            } else {
-                setCircles(response.data.circles);
-            }
-            setTotalPages(response.data.totalPages);
-        } catch (error) {
-            console.error('Error fetching circles:', error);
-        }
-    };
+  const fetchCircles = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles`, {
+        params: { page, limit: 20, search }
+      });
+      setCircles(response.data.circles || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotal(response.data.total || 0);
+    } catch (error) {
+      console.error('Error fetching circles:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetchPendingRevisions = async () => {
-        try {
-            const response = await axios.get(`${BACKEND_URL}/api/circles/revised-circles`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            });
-            setPendingRevisions(response.data);
-        } catch (error) {
-            console.error('Error fetching pending revisions:', error);
-        }
-    };
+  const handleViewCircle = (circle) => {
+    navigate(`/circles/${circle._id}`, { state: { circle } });
+  };
 
-    const fetchRegions = async () => {
-        try {
-            const response = await axios.get(`${BACKEND_URL}/api/regions`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            });
-            setRegions(response.data);
-        } catch (error) {
-            console.error('Error fetching regions:', error);
-        }
-    };
+  const handleDeleteCircle = async () => {
+    if (!deleteDialog.circle) return;
+    try {
+      await axios.delete(`${GEOJSON_BACKEND_URL}/api/v2/circles/${deleteDialog.circle._id}`);
+      setDeleteDialog({ open: false, circle: null });
+      fetchCircles();
+    } catch (error) {
+      console.error('Error deleting circle:', error);
+    }
+  };
 
-    const handleClickOpen = (circle) => {
-        if (circle) {
-            setEditingCircle(circle);
-            setCircleName(circle.name);
-            setSelectedRegion(circle.region ? circle.region._id : '');
-        } else {
-            setEditingCircle(null);
-            setCircleName('');
-            setSelectedRegion('');
-        }
-        setOpen(true);
-    };
+  return (
+    <Container maxWidth="lg">
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box>
+            <Typography variant="h4" gutterBottom>Circles</Typography>
+            <Typography variant="body1" color="text.secondary">
+              {total} circles created by grouping wards.
+            </Typography>
+          </Box>
+          {(user?.role === 'root' || user?.role === 'admin') && (
+            <Button
+              variant="contained"
+              startIcon={<AddCircleOutlineIcon />}
+              onClick={() => navigate('/circle-management')}
+            >
+              Create Circle
+            </Button>
+          )}
+        </Box>
 
-    const handleClose = () => {
-        setOpen(false);
-    };
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Search by Circle Name or Number..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          sx={{ mb: 3, backgroundColor: 'white' }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
 
-    const handleCreateOrUpdate = async () => {
-        const circleData = {
-            name: circleName,
-            region: selectedRegion
-        };
+        <TableContainer component={Paper} sx={{ maxHeight: '65vh' }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Circle No</strong></TableCell>
+                <TableCell><strong>Circle Name</strong></TableCell>
+                <TableCell><strong>Zone</strong></TableCell>
+                <TableCell align="center"><strong>Wards</strong></TableCell>
+                <TableCell align="center"><strong>Businesses</strong></TableCell>
+                <TableCell align="right"><strong>Actions</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <CircularProgress size={30} />
+                  </TableCell>
+                </TableRow>
+              ) : circles.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    No circles found. Use "Create Circle" to group wards into circles.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                circles.map((circle) => (
+                  <TableRow key={circle._id} hover>
+                    <TableCell>{circle.CIRCLE_NO || '—'}</TableCell>
+                    <TableCell>{circle.CIR_NAM_NU || circle.name || '—'}</TableCell>
+                    <TableCell>{circle.Zone_Name || '—'}</TableCell>
+                    <TableCell align="center">
+                      <Chip label={circle.ward_count || 0} color="primary" size="small" />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip label={circle.business_count || 0} color="secondary" size="small" />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="View Details">
+                        <IconButton size="small" onClick={() => handleViewCircle(circle)}>
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      {(user?.role === 'root' || user?.role === 'admin') && (
+                        <Tooltip title="Delete Circle">
+                          <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, circle })}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-        if (editingCircle) {
-            try {
-                const response = await axios.post(`${BACKEND_URL}/api/revised-circles`, {
-                    ...circleData,
-                    originalCircleId: editingCircle._id
-                }, {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`,
-                    },
-                });
-                const updatedCircles = circles.map(circle =>
-                    circle._id === editingCircle._id ? { ...circle, revised: true } : circle
-                );
-                setCircles(updatedCircles);
-            } catch (error) {
-                console.error('Error creating revised circle:', error);
-            }
-        } else {
-            try {
-                const response = await axios.post(`${BACKEND_URL}/api/circles`, circleData, {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`,
-                    },
-                });
-                setCircles([...circles, response.data]);
-            } catch (error) {
-                console.error('Error creating circle:', error);
-            }
-        }
-        handleClose();
-    };
+        {totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Pagination count={totalPages} page={page} onChange={(e, v) => setPage(v)} color="primary" />
+          </Box>
+        )}
+      </Box>
 
-    const handleEditClick = (circle) => {
-        handleClickOpen(circle);
-    };
-
-    const handleDeleteClick = async (id) => {
-        try {
-            await axios.delete(`${BACKEND_URL}/api/circles/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                }
-            });
-            const updatedCircles = circles.filter(circle => circle._id !== id);
-            setCircles(updatedCircles);
-        } catch (error) {
-            console.error('Error deleting circle:', error);
-        }
-    };
-
-    const handleDrawClick = (circle) => {
-        navigate(`/circles/${circle._id}`, { state: { circle } });
-    };
-
-    const handleApproveByRegion = async (id) => {
-        try {
-            await axios.put(`${BACKEND_URL}/api/circles/revised-circles/region/${id}`, null, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            });
-            fetchPendingRevisions();
-        } catch (error) {
-            console.error('Error approving revision by region:', error);
-        }
-    };
-
-    const handleApproveByAdmin = async (id) => {
-        try {
-            await axios.put(`${BACKEND_URL}/api/circles/revised-circles/admin/${id}`, null, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            });
-            fetchPendingRevisions();
-        } catch (error) {
-            console.error('Error approving revision by admin:', error);
-        }
-    };
-
-    const handleOpenRevisions = () => {
-        fetchPendingRevisions();
-        setOpenRevisions(true);
-    };
-
-    const handleCloseRevisions = () => {
-        setOpenRevisions(false);
-    };
-
-    const handlePageChange = (event, value) => {
-        setPage(value);
-    };
-
-    const handleSearchChange = (event) => {
-        setSearch(event.target.value);
-    };
-
-    return (
-        <Container>
-            <Box sx={{ mt: 4, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <TextField
-                    label="Search Circles"
-                    variant="outlined"
-                    value={search}
-                    onChange={handleSearchChange}
-                    sx={{ mb: 2, flex: 1, mr: 2 }}
-                    InputProps={{
-                        endAdornment: (
-                            <SearchIcon />
-                        ),
-                    }}
-                />
-                <Box>
-                    <Button variant="contained" color="primary" onClick={() => handleClickOpen(null)}>Create Circle</Button>
-                    <Button variant="contained" color="secondary" onClick={handleOpenRevisions} sx={{ ml: 2 }}>Show Revisions</Button>
-                </Box>
-            </Box>
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>S.No</TableCell>
-                            <TableCell>Circle Name</TableCell>
-                            <TableCell>Circle No</TableCell>
-                            <TableCell>Assigned Employee</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {circles.map((circle, index) => (
-                            <TableRow key={circle._id}>
-                                <TableCell>{(page - 1) * 10 + index + 1}</TableCell>
-                                <TableCell>{circle?.CIR_NAM_NU || circle?.name}</TableCell>
-                                <TableCell>{circle?.CIRCLE_NO}</TableCell>
-                                <TableCell>
-                                    {circle?.users?.length > 0 ? (
-                                        circle?.users?.map(user => (
-                                            <div key={user._id}>
-                                                {user.username} ({user.role})
-                                            </div>
-                                        )).reduce((prev, curr) => [prev, ', ', curr])
-                                    ) : (
-                                        'No assigned employees'
-                                    )}
-                                </TableCell>
-                                <TableCell>{circle?.status || 'Active'}</TableCell>
-
-                                <TableCell>
-                                    <IconButton color="primary" onClick={() => handleEditClick(circle)}>
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton color="secondary" onClick={() => handleDeleteClick(circle._id)}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                    <IconButton color="default" onClick={() => handleDrawClick(circle)}>
-                                        <DrawIcon />
-                                    </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <Stack spacing={2} sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary" />
-            </Stack>
-
-            <Dialog open={open} onClose={handleClose}>
-                <DialogTitle>{editingCircle ? 'Edit Circle' : 'Create Circle'}</DialogTitle>
-                <DialogContent>
-                    <TextField autoFocus margin="dense" id="circleName" label="Circle Name" type="text" fullWidth variant="outlined" value={circleName} onChange={(e) => setCircleName(e.target.value)} />
-                    <Select
-                        margin="dense"
-                        id="region"
-                        label="Select Region"
-                        value={selectedRegion}
-                        onChange={(e) => setSelectedRegion(e.target.value)}
-                        fullWidth
-                        variant="outlined"
-                        sx={{ mt: 2 }}
-                    >
-                        {regions.map((region) => (
-                            <MenuItem key={region._id} value={region._id}>
-                                {region.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleCreateOrUpdate}>{editingCircle ? 'Update' : 'Create'}</Button>
-                </DialogActions>
-            </Dialog>
-
-            <Dialog open={openRevisions} onClose={handleCloseRevisions}>
-                <DialogTitle>Pending Revisions</DialogTitle>
-                <DialogContent>
-                    <TableContainer component={Paper}>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>S.No</TableCell>
-                                    <TableCell>Circle Name</TableCell>
-                                    <TableCell>Assigned Employee</TableCell>
-                                    <TableCell>Number of Business</TableCell>
-                                    <TableCell>Region Name</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {pendingRevisions.map((revision, index) => (
-                                    <TableRow key={revision._id}>
-                                        <TableCell>{index + 1}</TableCell>
-                                        <TableCell>{revision.name}</TableCell>
-                                        <TableCell>{revision.assignedEmployee}</TableCell>
-                                        <TableCell>{revision.numberOfBusiness}</TableCell>
-                                        <TableCell>{revision.region?.name}</TableCell>
-                                        <TableCell>{revision.status}</TableCell>
-                                        <TableCell>
-                                            {user.role === 'region' && revision.status === 'pending' && (
-                                                <Button onClick={() => handleApproveByRegion(revision._id)}>Approve</Button>
-                                            )}
-                                            {user.role === 'admin' || user.role === 'root' && revision.status === 'regionApproved' && (
-                                                <Button onClick={() => handleApproveByAdmin(revision._id)}>Approve</Button>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseRevisions}>Close</Button>
-                </DialogActions>
-            </Dialog>
-        </Container>
-    );
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, circle: null })}>
+        <DialogTitle>Delete Circle?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will delete circle "{deleteDialog.circle?.CIR_NAM_NU || deleteDialog.circle?.name}" and
+            unassign its {deleteDialog.circle?.ward_count || 0} wards. The wards themselves will NOT be deleted.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false, circle: null })}>Cancel</Button>
+          <Button onClick={handleDeleteCircle} color="error" variant="contained">Delete</Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+  );
 }
 
 export default Circles;
-
-

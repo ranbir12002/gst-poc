@@ -3,13 +3,15 @@ const mongoose = require('mongoose');
 const WardSchema = new mongoose.Schema({
   WARD_NO: { type: Number, required: true, unique: true },
   NAME: { type: String, required: true },
-  CIRCLE_NO: { type: Number, required: true },
-  CIR_NAM_NU: { type: String },
+  // These are metadata from the source GeoJSON — NOT enforced relationships
+  CIRCLE_NO: { type: Number },        // Optional: original circle assignment from KML
+  CIR_NAM_NU: { type: String },       // Optional: original circle name from KML
   Zone_Name: { type: String },
   AC_Name: { type: String },
   CORPORATE: { type: String },
   Area__Sqkm: { type: Number },
-  circle: { type: mongoose.Schema.Types.ObjectId, ref: 'Circle' }, // For relational queries
+  // Actual relational reference (set when a circle is created via UI)
+  circle: { type: mongoose.Schema.Types.ObjectId, ref: 'Circle' },
   geometry: {
     type: { type: String, enum: ['Polygon', 'MultiPolygon'], required: true },
     coordinates: { type: mongoose.Schema.Types.Mixed, required: true }

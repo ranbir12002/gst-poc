@@ -11,6 +11,9 @@ import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
 import CircleDetails from './pages/CircleDetails';
 import SignUp from './pages/SignUp';
+import CircleManagement from './pages/CircleManagement';
+import WardDetails from './pages/WardDetails';
+
 
 import { UserProvider, UserContext } from './context/UserContext';
 
@@ -53,12 +56,29 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/wards/:id"
+            element={
+              <ProtectedRoute roles={['root', 'admin', 'region']}>
+                <WardDetails />
+              </ProtectedRoute>
+            }
+          />
+
 
           <Route
             path="/circles"
             element={
               <ProtectedRoute roles={['root', 'admin', 'region', 'circle']}>
                 <Circle />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/circle-management"
+            element={
+              <ProtectedRoute roles={['root', 'admin', 'region']}>
+                <CircleManagement />
               </ProtectedRoute>
             }
           />

@@ -48,7 +48,7 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
   const getAddress = (business) => {
     if (business) {
       const {
-        buildingNo = '',
+        buildingName = '',
         flatNo = '',
         street = '',
         neighborhood = '',
@@ -57,7 +57,7 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
         stateCode = ''
       } = business;
       const addressParts = [
-        buildingNo,
+        buildingName,
         flatNo,
         street,
         neighborhood,
@@ -69,6 +69,7 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
       return addressParts.filter(part => part).join(', ');
     }
   };
+
 
   const handleNameChange = (e) => {
     const newName = e.target.value;

@@ -21,7 +21,7 @@ function Navbar() {
                         <img src={headerLogo} alt="Logo" style={{ maxHeight: '100px' }} />
 
                         <Button color="inherit" component={Link} to="/dashboard">Dashboard</Button>
-                        {user.role === 'admin' || user.role === 'root' && (
+                        {(user.role === 'admin' || user.role === 'root') && (
                             <>
                                 <Button color="inherit" component={Link} to="/users">Users</Button>
                             </>
@@ -34,6 +34,10 @@ function Navbar() {
                         {(user.role === 'admin' || user.role === 'root' || user.role === 'region' || user.role === 'circle') && (
                             <Button color="inherit" component={Link} to="/circles">Circle</Button>
                         )}
+                        {(user.role === 'admin' || user.role === 'root' || user.role === 'region') && (
+                            <Button color="inherit" component={Link} to="/circle-management">Circle Builder</Button>
+                        )}
+
                         {/* {user.role === 'admin' || user.role === 'root' || user.role === 'region' || user.role === 'circle' && (
                             <Button color="inherit" component={Link} to={`/circles/${user.circleId}`}>Circle Details</Button>
                         )} */}

@@ -5,8 +5,11 @@ import axios from 'axios';
 import { UserContext } from '../context/UserContext';
 import { GEOJSON_BACKEND_URL } from '../config';
 
+import { useNavigate } from 'react-router-dom';
+
 function Wards() {
     const { user } = useContext(UserContext);
+    const navigate = useNavigate();
     const [wards, setWards] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
@@ -27,10 +30,15 @@ function Wards() {
         }
     };
 
+    const handleViewDetails = (ward) => {
+        navigate(`/wards/${ward._id}`, { state: { ward } });
+    };
+
     const filteredWards = wards.filter(ward => 
         ward.NAME?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         ward.WARD_NO?.toString().includes(searchTerm) ||
-        ward.circle?.CIR_NAM_NU?.toLowerCase().includes(searchTerm.toLowerCase())
+        ward.circle?.CIR_NAM_NU?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ward.CIR_NAM_NU?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -78,10 +86,20 @@ function Wards() {
                                     <TableRow key={ward._id} hover>
                                         <TableCell>{ward.WARD_NO}</TableCell>
                                         <TableCell>{ward.NAME}</TableCell>
-                                        <TableCell>{ward.circle?.CIR_NAM_NU || 'N/A'}</TableCell>
-                                        <TableCell>{ward.circle?.CIRCLE_NO || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            {ward.circle?.CIR_NAM_NU || ward.CIR_NAM_NU || 'N/A'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {ward.circle?.CIRCLE_NO || ward.CIRCLE_NO || 'N/A'}
+                                        </TableCell>
                                         <TableCell align="right">
-                                            <Button size="small" variant="outlined" disabled>View Details</Button>
+                                            <Button 
+                                                size="small" 
+                                                variant="outlined" 
+                                                onClick={() => handleViewDetails(ward)}
+                                            >
+                                                View Details
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 ))
