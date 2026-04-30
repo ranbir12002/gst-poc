@@ -162,14 +162,14 @@ router.get('/api/v2/circles/:id/businesses', async (req, res) => {
 
     // Get businesses via the ward numbers that belong to this circle
     const wardNos = circle.ward_numbers || [];
-    // Find businesses linked to this circle directly or via its wards
+    // Find businesses linked to this circle directly or via its assigned wards
     const query = {
       $or: [
         { circle: circle._id },
-        { circle_no: circle.CIRCLE_NO },
-        { ward_no: { $in: circle.ward_numbers } }
+        { ward_no: { $in: circle.ward_numbers || [] } }
       ]
     };
+
 
     const [businesses, total] = await Promise.all([
       Business.find(query).skip(skip).limit(limit),

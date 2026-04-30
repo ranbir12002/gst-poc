@@ -24,7 +24,9 @@ const WardDetails = () => {
     } else {
       fetchBusinesses();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, ward]);
+
 
   const fetchWard = async () => {
     try {
@@ -40,8 +42,10 @@ const WardDetails = () => {
 
   const fetchBusinesses = async () => {
     try {
+      setBusinesses([]); // Clear old businesses
       setLoadingBusinesses(true);
       console.log(`WardDetails: Fetching businesses for ward ID: ${id}`);
+
       const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/wards/${id}/businesses?limit=1000`);
       console.log('WardDetails API Response:', response.data);
       setBusinesses(response.data.businesses || []);

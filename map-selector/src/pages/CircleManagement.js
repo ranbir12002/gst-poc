@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { 
     Container, Grid, Paper, Typography, List, ListItem, ListItemText, 
     Button, TextField, Box, Divider, Alert, CircularProgress,
-    IconButton, Tooltip
+    IconButton
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
@@ -69,6 +69,7 @@ const CircleManagement = () => {
         if (!loading && wards.length > 0 && mapContainerRef.current && !mapRef.current) {
             initializeMap();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loading, wards]);
 
     const initializeMap = () => {
@@ -97,7 +98,8 @@ const CircleManagement = () => {
                             name: ward.NAME,
                             ward_no: ward.WARD_NO,
                             circle_no: ward.CIRCLE_NO,
-                            circle_name: ward.circle?.CIR_NAM_NU || ward.CIR_NAM_NU || 'N/A'
+                            circle_name: ward.circle?.CIR_NAM_NU || ward.CIR_NAM_NU || 'N/A',
+                            isAssigned: !!ward.circle
                         }
                     }))
                 }
@@ -113,16 +115,21 @@ const CircleManagement = () => {
                         'case',
                         ['boolean', ['feature-state', 'selected'], false],
                         '#ff9800', // Selected color (Orange)
+                        ['get', 'isAssigned'],
+                        '#9e9e9e', // Already assigned (Gray)
                         '#2196f3'  // Default color (Blue)
                     ],
                     'fill-opacity': [
                         'case',
                         ['boolean', ['feature-state', 'selected'], false],
                         0.6,
+                        ['get', 'isAssigned'],
+                        0.4,
                         0.2
                     ]
                 }
             });
+
 
             // Layer for ward outlines
             map.addLayer({
@@ -192,6 +199,14 @@ const CircleManagement = () => {
         const ward = wards.find(w => w.WARD_NO === wardNo);
         if (!ward) return;
 
+        // If ward is already in a circle, show a helpful warning but allow selection
+        // This allows users to "move" wards between circles easily.
+        if (ward.circle && !selectedWardIds.has(ward._id)) {
+            setSuccess(`Note: Ward ${ward.WARD_NO} will be moved from ${ward.circle.CIR_NAM_NU || ward.circle.name} to this new circle.`);
+            setTimeout(() => setSuccess(null), 4000);
+        }
+
+
         const wardId = ward._id;
         setSelectedWardIds(prev => {
             const next = new Set(prev);
@@ -207,6 +222,7 @@ const CircleManagement = () => {
             return next;
         });
     };
+
 
     const handleClearSelection = () => {
         wards.forEach(ward => {

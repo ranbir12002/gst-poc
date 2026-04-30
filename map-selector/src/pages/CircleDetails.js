@@ -36,6 +36,7 @@ const CircleDetails = () => {
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
+        setBusinesses([]); // Clear old businesses before fetching new ones
         const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles/${circle._id}/businesses?limit=200`);
         setBusinesses(response.data.businesses);
       } catch (error) {
@@ -46,6 +47,7 @@ const CircleDetails = () => {
       fetchBusinesses();
     }
   }, [circle]);
+
 
 
   const updateSelectedFeature = (updatedFeature) => {
