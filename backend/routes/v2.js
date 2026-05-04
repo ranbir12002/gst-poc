@@ -199,73 +199,77 @@ router.post('/api/v2/circles/assign-wards', async (req, res) => {
       return res.status(400).json({ error: 'No wards selected' });
     }
 
-    // Compute combined geometry from wards
-    let combinedGeometry = null;
-    try {
-      const validFeatures = wards
-        .filter(w => w.geometry && w.geometry.coordinates)
-        .map(w => turf.feature(w.geometry));
-
-      console.log(`Unioning ${validFeatures.length} wards...`);
-
-      if (validFeatures.length === 1) {
-        combinedGeometry = validFeatures[0].geometry;
-      } else if (validFeatures.length > 1) {
-        // Use featureCollection for union in Turf v7
-        const fc = turf.featureCollection(validFeatures);
-        const combined = turf.union(fc);
-        
-        if (combined) {
-          // Flatten GeometryCollection to MultiPolygon if necessary
-          if (combined.geometry.type === 'GeometryCollection') {
-            const polygons = combined.geometry.geometries.filter(g => g.type === 'Polygon' || g.type === 'MultiPolygon');
-            if (polygons.length > 0) {
-              combinedGeometry = polygons[0]; // Take the first major piece
-            }
-          } else {
-            combinedGeometry = combined.geometry;
-          }
-        }
-      }
-    } catch (unionError) {
-      console.error('Geometry Union Error (non-fatal):', unionError.message);
-      // Non-fatal — we can still create the circle link even if the polygon union fails
-    }
-
     let circle;
     try {
       if (circleId) {
-        // Adding wards to an existing circle
         circle = await Circle.findById(circleId);
-        if (!circle) return res.status(404).json({ error: 'Circle not found' });
+      } else if (circleNo) {
+        circle = await Circle.findOne({ CIRCLE_NO: circleNo });
+      }
 
-        // Merge new wards with existing
+      // 1. Handle OLD wards that are removed from this circle
+      if (circle) {
         const existingWardIds = circle.wards.map(w => w.toString());
-        const newWardIds = wardIds.filter(id => !existingWardIds.includes(id));
-        const allWardIds = [...existingWardIds, ...newWardIds];
+        const removedWardIds = existingWardIds.filter(id => !wardIds.includes(id));
+        
+        if (removedWardIds.length > 0) {
+          // Update removed wards to be empty
+          await Ward.updateMany(
+            { _id: { $in: removedWardIds } },
+            { $unset: { circle: 1, CIRCLE_NO: 1, CIR_NAM_NU: 1 } }
+          );
 
-        const allWards = await Ward.find({ _id: { $in: allWardIds } });
+          // Update businesses in these removed wards to be empty
+          const removedWards = await Ward.find({ _id: { $in: removedWardIds } });
+          const removedWardNos = removedWards.map(w => w.WARD_NO);
+          if (removedWardNos.length > 0) {
+            await Business.updateMany(
+              { ward_no: { $in: removedWardNos } },
+              { $unset: { circle: 1, circle_no: 1, circle_name: 1 } }
+            );
+          }
+        }
+      }
 
-        circle.wards = allWardIds;
-        circle.ward_numbers = allWards.map(w => w.WARD_NO);
-        circle.ward_names = allWards.map(w => w.NAME);
-        circle.ward_count = allWards.length;
+      // 2. Find OTHER circles that currently own any of the NEW wardIds and remove them
+      const otherCircles = await Circle.find({ 
+        wards: { $in: wardIds },
+        _id: circle ? { $ne: circle._id } : { $exists: true }
+      });
+
+      for (const otherCircle of otherCircles) {
+        otherCircle.wards = otherCircle.wards.filter(wId => !wardIds.includes(wId.toString()));
+        const remainingWards = await Ward.find({ _id: { $in: otherCircle.wards } });
+        otherCircle.ward_numbers = remainingWards.map(w => w.WARD_NO);
+        otherCircle.ward_names = remainingWards.map(w => w.NAME);
+        otherCircle.ward_count = remainingWards.length;
+        otherCircle.business_count = await Business.countDocuments({ ward_no: { $in: otherCircle.ward_numbers } });
+        
+        // Remove geometry as it might be outdated or invalid
+        otherCircle.geometry = undefined;
+        await otherCircle.save();
+      }
+
+      // 3. Update or Create the main circle
+      if (circle) {
+        circle.wards = wardIds;
+        circle.ward_numbers = wards.map(w => w.WARD_NO);
+        circle.ward_names = wards.map(w => w.NAME);
+        circle.ward_count = wards.length;
         if (circleName) circle.CIR_NAM_NU = circleName;
         if (circleName) circle.name = circleName;
         if (circleNo) circle.CIRCLE_NO = circleNo;
         if (zoneName) circle.Zone_Name = zoneName;
         
-        if (combinedGeometry) circle.geometry = combinedGeometry;
+        circle.geometry = undefined; // No longer saving combined geometry
         await circle.save();
       } else {
-        // Create a new circle from selected wards
         circle = new Circle({
           CIRCLE_NO: circleNo,
           CIR_NAM_NU: circleName,
           name: circleName,
           Zone_Name: zoneName,
           CORPORATE: corporate,
-          geometry: combinedGeometry,
           wards: wardIds,
           ward_count: wards.length,
           ward_numbers: wards.map(w => w.WARD_NO),
@@ -274,11 +278,13 @@ router.post('/api/v2/circles/assign-wards', async (req, res) => {
         await circle.save();
       }
     } catch (dbError) {
-      console.error('Database Error creating circle:', dbError);
+      console.error('Database Error creating/updating circle:', dbError);
+      
+      // Handle Duplicate Key Error
       if (dbError.code === 11000) {
         return res.status(400).json({ error: `Circle Number ${circleNo} already exists.` });
       }
-      throw dbError; // Catch in outer block
+      throw dbError; 
     }
 
     // Update wards to point to their new circle
@@ -305,7 +311,16 @@ router.post('/api/v2/circles/assign-wards', async (req, res) => {
     // Compute business count for the circle
     const bizCount = await Business.countDocuments({ ward_no: { $in: circle.ward_numbers } });
     circle.business_count = bizCount;
-    await circle.save();
+    
+    try {
+      await circle.save();
+    } catch (finalSaveError) {
+      console.error('Final circle save error:', finalSaveError.message);
+      if (finalSaveError.code === 16755) {
+        circle.geometry = undefined;
+        await circle.save();
+      }
+    }
 
 
     console.log(`Successfully created/updated Circle: ${circle.CIR_NAM_NU} (ID: ${circle.CIRCLE_NO})`);

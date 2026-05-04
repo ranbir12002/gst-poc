@@ -136,74 +136,119 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
         type: 'circle',
         source: 'businesses',
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 2, 15, 6],
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            10, ['case', ['boolean', ['feature-state', 'hover'], false], 6, 3],
+            14, ['case', ['boolean', ['feature-state', 'hover'], false], 12, 6],
+            18, ['case', ['boolean', ['feature-state', 'hover'], false], 24, 12]
+          ],
           'circle-color': '#f44336',
-          'circle-stroke-color': '#fff',
-          'circle-stroke-width': 1,
-          'circle-opacity': 0.8
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': [
+            'interpolate', ['linear'], ['zoom'],
+            12, 1,
+            15, 2
+          ],
+          'circle-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            1,
+            0.8
+          ]
         }
       });
 
-      // Business click handler
-      map.on('click', 'businesses-circles', (e) => {
-        const props = e.features[0].properties;
-        new maplibregl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(`
-            <div style="font-family: sans-serif; padding: 5px;">
-              <strong style="color: #f44336;">${props.name}</strong><br/>
-              <span style="font-size: 0.8rem; color: #666;">GSTIN: ${props.gstin}</span><br/>
-              <span style="font-size: 0.75rem;">${props.address || ''}</span>
-            </div>
-          `)
-          .addTo(map);
-      });
-
-
-      // Click handler — show ward info + load businesses
-      map.on('click', 'wards-fill', async (e) => {
-        const feature = e.features[0];
-        const props = feature.properties;
-
-        if (setSelectedFeature) setSelectedFeature(feature);
-        if (setFeatures) setFeatures([feature]);
-
-        // Load businesses for this ward
-        try {
-          const targetId = props.wardId?.toString();
-          console.log(`Loading businesses for ward ID: ${targetId}`);
-          const response = await axios.get(
-            `${GEOJSON_BACKEND_URL}/api/v2/wards/${targetId}/businesses?limit=500`
+      // Hover cursor and scaling effect
+      let hoveredBusinessId = null;
+      map.on('mousemove', 'businesses-circles', (e) => {
+        if (e.features.length > 0) {
+          if (hoveredBusinessId !== null) {
+            map.setFeatureState(
+              { source: 'businesses', id: hoveredBusinessId },
+              { hover: false }
+            );
+          }
+          hoveredBusinessId = e.features[0].id;
+          map.setFeatureState(
+            { source: 'businesses', id: hoveredBusinessId },
+            { hover: true }
           );
-          
-          const loadedBusinesses = response.data.businesses || [];
-          console.log(`Loaded ${loadedBusinesses.length} businesses`);
-          
-          if (setBusinesses) setBusinesses(loadedBusinesses);
-          setLocalBusinesses(loadedBusinesses);
+          map.getCanvas().style.cursor = 'pointer';
+        }
+      });
 
-          if (setBusinessInfo) setBusinessInfo({
-            wardName: props.name,
-            wardNo: props.ward_no,
-            total: response.data.total
-          });
-        } catch (err) {
-          console.error('Error loading ward businesses:', err);
+      map.on('mouseleave', 'businesses-circles', () => {
+        if (hoveredBusinessId !== null) {
+          map.setFeatureState(
+            { source: 'businesses', id: hoveredBusinessId },
+            { hover: false }
+          );
+        }
+        hoveredBusinessId = null;
+        map.getCanvas().style.cursor = '';
+      });
+
+      // Unified click handler
+      map.on('click', async (e) => {
+        // 1. Check for businesses first
+        const bizFeatures = map.queryRenderedFeatures(e.point, { layers: ['businesses-circles'] });
+        if (bizFeatures.length > 0) {
+          const props = bizFeatures[0].properties;
+          new maplibregl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <div style="font-family: sans-serif; padding: 5px;">
+                <strong style="color: #f44336;">${props.name}</strong><br/>
+                <span style="font-size: 0.8rem; color: #666;">GSTIN: ${props.gstin}</span><br/>
+                <span style="font-size: 0.75rem;">${props.address || ''}</span>
+              </div>
+            `)
+            .addTo(map);
+          return; // STOP HERE if business was clicked
         }
 
+        // 2. Check for wards if no business was clicked
+        const wardFeatures = map.queryRenderedFeatures(e.point, { layers: ['wards-fill'] });
+        if (wardFeatures.length > 0) {
+          const feature = wardFeatures[0];
+          const props = feature.properties;
 
-        // Popup
-        new maplibregl.Popup({ closeOnClick: true })
-          .setLngLat(e.lngLat)
-          .setHTML(`
-            <div style="font-family: sans-serif; min-width: 150px;">
-              <strong>${props.name}</strong><br/>
-              Ward No: ${props.ward_no}<br/>
-              Circle: ${props.circle_name || 'Unassigned'}<br/>
-              Businesses: ${props.business_count || 0}
-            </div>
-          `)
-          .addTo(map);
+          if (setSelectedFeature) setSelectedFeature(feature);
+          if (setFeatures) setFeatures([feature]);
+
+          // Load businesses for this ward
+          try {
+            const targetId = props.wardId?.toString();
+            const response = await axios.get(
+              `${GEOJSON_BACKEND_URL}/api/v2/wards/${targetId}/businesses?limit=500`
+            );
+            
+            const loadedBusinesses = response.data.businesses || [];
+            if (setBusinesses) setBusinesses(loadedBusinesses);
+            setLocalBusinesses(loadedBusinesses);
+
+            if (setBusinessInfo) setBusinessInfo({
+              wardName: props.name,
+              wardNo: props.ward_no,
+              total: response.data.total
+            });
+          } catch (err) {
+            console.error('Error loading ward businesses:', err);
+          }
+
+          // Popup
+          new maplibregl.Popup({ closeOnClick: true })
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <div style="font-family: sans-serif; min-width: 150px;">
+                <strong>${props.name}</strong><br/>
+                Ward No: ${props.ward_no}<br/>
+                Circle: ${props.circle_name || 'Unassigned'}<br/>
+                Businesses: ${props.business_count || 0}
+              </div>
+            `)
+            .addTo(map);
+        }
       });
 
       // Hover cursor

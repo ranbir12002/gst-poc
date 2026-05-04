@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Box, Typography, TextField, InputAdornment,
@@ -25,11 +25,7 @@ function Circles() {
   const [total, setTotal] = useState(0);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, circle: null });
 
-  useEffect(() => {
-    fetchCircles();
-  }, [page, search]);
-
-  const fetchCircles = async () => {
+  const fetchCircles = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles`, {
@@ -43,7 +39,11 @@ function Circles() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search]);
+
+  useEffect(() => {
+    fetchCircles();
+  }, [fetchCircles]);
 
   const handleViewCircle = (circle) => {
     navigate(`/circles/${circle._id}`, { state: { circle } });
@@ -129,7 +129,18 @@ function Circles() {
                     <TableCell>{circle.CIR_NAM_NU || circle.name || '—'}</TableCell>
                     <TableCell>{circle.Zone_Name || '—'}</TableCell>
                     <TableCell align="center">
-                      <Chip label={circle.ward_count || 0} color="primary" size="small" />
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center', maxWidth: 200, mx: 'auto' }}>
+                        {circle.ward_numbers && circle.ward_numbers.length > 0 ? (
+                          circle.ward_numbers.slice(0, 5).map(no => (
+                            <Chip key={no} label={no} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                          ))
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">None</Typography>
+                        )}
+                        {circle.ward_numbers && circle.ward_numbers.length > 5 && (
+                          <Chip label={`+${circle.ward_numbers.length - 5}`} size="small" sx={{ fontSize: '0.7rem' }} />
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell align="center">
                       <Chip label={circle.business_count || 0} color="secondary" size="small" />

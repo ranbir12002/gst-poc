@@ -46,7 +46,7 @@ const WardDetails = () => {
       setLoadingBusinesses(true);
       console.log(`WardDetails: Fetching businesses for ward ID: ${id}`);
 
-      const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/wards/${id}/businesses?limit=1000`);
+      const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/wards/${id}/businesses?limit=5000`);
       console.log('WardDetails API Response:', response.data);
       setBusinesses(response.data.businesses || []);
       setLoadingBusinesses(false);

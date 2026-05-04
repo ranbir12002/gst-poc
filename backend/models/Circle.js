@@ -14,17 +14,6 @@ const CircleSchema = new mongoose.Schema({
   ward_numbers: [Number],
   ward_names: [String],
 
-  // Combined geometry (auto-computed from constituent wards)
-  geometry: {
-    type: {
-      type: String,
-      enum: ['Polygon', 'MultiPolygon'],
-    },
-    coordinates: {
-      type: mongoose.Schema.Types.Mixed
-    }
-  },
-
   // Stats
   business_count: { type: Number, default: 0 },
   status: { type: String, default: 'active' },
@@ -36,7 +25,5 @@ const CircleSchema = new mongoose.Schema({
     description: String
   },
 }, { timestamps: true });
-
-CircleSchema.index({ geometry: '2dsphere' });
 
 module.exports = mongoose.model('Circle', CircleSchema);
