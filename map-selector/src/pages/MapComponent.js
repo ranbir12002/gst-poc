@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
 import { GEOJSON_BACKEND_URL } from '../config';
+import { decryptData } from '../utils/encryption';
 
 const OSM_STYLE = {
   version: 8,
@@ -223,7 +224,7 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
               `${GEOJSON_BACKEND_URL}/api/v2/wards/${targetId}/businesses?limit=500`
             );
             
-            const loadedBusinesses = response.data.businesses || [];
+            const loadedBusinesses = decryptData(response.data.businesses) || [];
             if (setBusinesses) setBusinesses(loadedBusinesses);
             setLocalBusinesses(loadedBusinesses);
 

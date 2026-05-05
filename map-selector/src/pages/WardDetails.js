@@ -7,6 +7,7 @@ import MapComponent from './MapComponent';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BusinessIcon from '@mui/icons-material/Business';
 import MapIcon from '@mui/icons-material/Map';
+import { decryptData } from '../utils/encryption';
 
 const WardDetails = () => {
   const { id } = useParams();
@@ -47,7 +48,7 @@ const WardDetails = () => {
 
       const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/wards/${id}/businesses?limit=30000`);
       console.log('WardDetails API Response:', response.data);
-      setBusinesses(response.data.businesses || []);
+      setBusinesses(decryptData(response.data.businesses) || []);
       setLoadingBusinesses(false);
     } catch (error) {
       console.error('WardDetails: Error fetching businesses:', error);

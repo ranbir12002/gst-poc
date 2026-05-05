@@ -9,6 +9,7 @@ const GeoJSON = require('../models/GeoJSON');
 const Circle = require('../models/Circle');
 const Ward = require('../models/Ward');
 const User = require('../models/User');
+const { encryptData } = require('../utils/encryption');
 
 // ============================================================
 //  WARD ENDPOINTS (base entity)
@@ -74,10 +75,11 @@ router.get('/api/v2/wards/:id/businesses', async (req, res) => {
     res.json({
       ward_name: ward.NAME,
       ward_no: ward.WARD_NO,
-      businesses,
+      businesses: encryptData(businesses),
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       total,
+      isEncrypted: true,
       debug: {
         query,
         wardId: ward._id,
@@ -179,10 +181,11 @@ router.get('/api/v2/circles/:id/businesses', async (req, res) => {
     res.json({
       circle_name: circle.CIR_NAM_NU || circle.name,
       circle_no: circle.CIRCLE_NO,
-      businesses,
+      businesses: encryptData(businesses),
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      total
+      total,
+      isEncrypted: true
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch businesses' });
@@ -366,7 +369,7 @@ router.get('/api/v2/businesses/by-ward/:wardNo', async (req, res) => {
     const businesses = await Business.find({ ward_no: parseInt(req.params.wardNo) })
       .select('name gstin latitude longitude street ward_no ward_name')
       .limit(30000);
-    res.json({ count: businesses.length, businesses });
+    res.json({ count: businesses.length, businesses: encryptData(businesses), isEncrypted: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch ward businesses' });
   }
@@ -381,7 +384,7 @@ router.get('/api/v2/businesses/by-circle/:circleNo', async (req, res) => {
     const businesses = await Business.find({ ward_no: { $in: circle.ward_numbers || [] } })
       .select('name gstin latitude longitude street ward_no ward_name')
       .limit(30000);
-    res.json({ count: businesses.length, businesses });
+    res.json({ count: businesses.length, businesses: encryptData(businesses), isEncrypted: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch circle businesses' });
   }
@@ -394,7 +397,7 @@ router.get('/api/v2/businesses/:id', async (req, res) => {
       .populate('ward', 'NAME WARD_NO')
       .populate('circle', 'CIR_NAM_NU CIRCLE_NO');
     if (!business) return res.status(404).json({ error: 'Business not found' });
-    res.json(business);
+    res.json(encryptData(business));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch business' });
   }
@@ -479,7 +482,7 @@ router.post('/businesses', async (req, res) => {
       }
     });
 
-    res.status(200).send(businesses);
+    res.status(200).send(encryptData(businesses));
   } catch (error) {
     res.status(500).send(error);
   }
@@ -493,7 +496,7 @@ router.get('/business/:id', async (req, res) => {
     if (!businessInfo) {
       return res.status(404).send('Business not found');
     }
-    res.json(businessInfo);
+    res.json(encryptData(businessInfo));
   } catch (error) {
     console.error('Error fetching business information:', error);
     res.status(500).send('Error fetching business information');

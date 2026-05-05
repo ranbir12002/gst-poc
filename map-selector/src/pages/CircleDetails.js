@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { GEOJSON_BACKEND_URL } from '../config';
 import './CircleDetails.css';
+import { decryptData } from '../utils/encryption';
 
 const CircleDetails = () => {
   const location = useLocation();
@@ -39,7 +40,7 @@ const CircleDetails = () => {
         setLoadingBusinesses(true);
         setBusinesses([]); // Clear old businesses before fetching new ones
         const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles/${circle._id}/businesses?limit=30000`);
-        setBusinesses(response.data.businesses);
+        setBusinesses(decryptData(response.data.businesses));
       } catch (error) {
         console.error('Error fetching circle businesses:', error);
       } finally {
