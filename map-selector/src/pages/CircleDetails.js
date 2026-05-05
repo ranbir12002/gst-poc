@@ -17,6 +17,7 @@ const CircleDetails = () => {
   const [businessInfo, setBusinessInfo] = useState(null);
   const [mapKey, setMapKey] = useState(0);
   const [businesses, setBusinesses] = useState([]);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -36,11 +37,14 @@ const CircleDetails = () => {
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
+        setLoadingBusinesses(true);
         setBusinesses([]); // Clear old businesses before fetching new ones
         const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles/${circle._id}/businesses?limit=30000`);
         setBusinesses(response.data.businesses);
       } catch (error) {
         console.error('Error fetching circle businesses:', error);
+      } finally {
+        setLoadingBusinesses(false);
       }
     };
     if (circle && circle._id) {
@@ -100,6 +104,7 @@ const CircleDetails = () => {
             refreshMap={refreshMap}
             handleExportBusinesses={handleExportBusinesses}
             businesses={businesses}
+            loadingBusinesses={loadingBusinesses}
             circle={circle}
           />
         </Grid>

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { GEOJSON_BACKEND_URL } from '../config';
-import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress } from '@mui/material';
 
-const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeature, refreshMap, handleExportBusinesses, businesses, circle }) => {
+const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeature, refreshMap, handleExportBusinesses, businesses, loadingBusinesses, circle }) => {
   const [polygonName, setPolygonName] = useState(circle?.name || '');
   const [polygonRegionName, setPolygonRegionName] = useState(circle?.region?.name);
   const [address, setAddress] = useState('');
@@ -197,9 +197,9 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
           <Typography><strong>Longitude:</strong> {businessInfo?.location?.coordinates[0]}</Typography>
         </Box>
       )}
-      {businesses.length > 0 && (
-        <TableContainer component={Paper} sx={{ marginY: 2 }}>
-          <Table>
+      {(businesses.length > 0 || loadingBusinesses) && (
+        <TableContainer component={Paper} sx={{ marginY: 2, maxHeight: '500px' }}>
+          <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Trade Name</TableCell>
@@ -210,17 +210,26 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
               </TableRow>
             </TableHead>
             <TableBody>
-              {businesses.map((business, index) => (
-                <TableRow key={index}>
-                  <TableCell sx={{ fontSize: '0.75rem' }}>{business.name}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem' }}>{business.gstin}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem' }}>{getAddress(business)}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem' }}>{business.pincode}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem' }}>
-                    {business.latitude?.toFixed(4)}, {business.longitude?.toFixed(4)}
+              {loadingBusinesses ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <CircularProgress size={30} />
+                    <Typography variant="body2" sx={{ mt: 2 }}>Loading businesses...</Typography>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                businesses.map((business, index) => (
+                  <TableRow key={index} hover>
+                    <TableCell sx={{ fontSize: '0.75rem' }}>{business.name}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem' }}>{business.gstin}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem' }}>{getAddress(business)}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem' }}>{business.pincode}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem' }}>
+                      {business.latitude?.toFixed(4)}, {business.longitude?.toFixed(4)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
