@@ -6,7 +6,6 @@ import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { GEOJSON_BACKEND_URL } from '../config';
 import './CircleDetails.css';
-import * as XLSX from 'xlsx';
 
 const CircleDetails = () => {
   const location = useLocation();
@@ -68,27 +67,6 @@ const CircleDetails = () => {
     setMapKey((prevKey) => prevKey + 1); // Increment the key to re-render the map
   };
 
-  const handleExportBusinesses = () => {
-    if (selectedFeature) {
-      const polygonName = selectedFeature.properties.name || 'polygon';
-      const fileName = `${polygonName}.xlsx`;
-      const filteredBusinesses = businesses.map((business) => {
-        const {
-          name, gstin, street, buildingNo
-          , stateCode, pincode, flatNo, buildingName, district
-        } = business;
-        return {
-          name, gstin, street, buildingNo
-          , stateCode, pincode, flatNo, buildingName, district
-        };
-      });
-
-      const ws = XLSX.utils.json_to_sheet(filteredBusinesses);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Businesses');
-      XLSX.writeFile(wb, fileName);
-    }
-  };
 
   return (
     <Container maxWidth={false} disableGutters>
@@ -102,7 +80,6 @@ const CircleDetails = () => {
             updateSelectedFeature={updateSelectedFeature}
             setBusinessInfo={setBusinessInfo}
             refreshMap={refreshMap}
-            handleExportBusinesses={handleExportBusinesses}
             businesses={businesses}
             loadingBusinesses={loadingBusinesses}
             circle={circle}

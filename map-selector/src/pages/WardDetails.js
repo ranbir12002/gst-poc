@@ -7,7 +7,6 @@ import MapComponent from './MapComponent';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BusinessIcon from '@mui/icons-material/Business';
 import MapIcon from '@mui/icons-material/Map';
-import * as XLSX from 'xlsx';
 
 const WardDetails = () => {
   const { id } = useParams();
@@ -57,23 +56,6 @@ const WardDetails = () => {
   };
 
 
-  const handleExport = () => {
-    if (businesses.length === 0) return;
-    
-    const data = businesses.map(b => ({
-      'Trade Name': b.name,
-      'GSTIN': b.gstin,
-      'Address': `${b.flatNo || ''} ${b.buildingName || ''} ${b.street || ''} ${b.neighborhood || ''}`.trim(),
-      'Pincode': b.pincode,
-      'Latitude': b.latitude,
-      'Longitude': b.longitude
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Businesses');
-    XLSX.writeFile(wb, `Ward_${ward.WARD_NO}_Businesses.xlsx`);
-  };
 
   if (loading) {
     return (
@@ -126,9 +108,6 @@ const WardDetails = () => {
           <Paper elevation={3} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', borderRadius: 2, overflow: 'hidden' }}>
             <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
               <Typography variant="h6">Businesses in Ward</Typography>
-              <Button size="small" variant="contained" onClick={handleExport} disabled={businesses.length === 0}>
-                Export Excel
-              </Button>
             </Box>
             
             <TableContainer sx={{ flexGrow: 1 }}>

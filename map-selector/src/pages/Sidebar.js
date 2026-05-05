@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import * as XLSX from 'xlsx';
 import { GEOJSON_BACKEND_URL } from '../config';
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress } from '@mui/material';
 
-const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeature, refreshMap, handleExportBusinesses, businesses, loadingBusinesses, circle }) => {
+const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeature, refreshMap, businesses, loadingBusinesses, circle }) => {
   const [polygonName, setPolygonName] = useState(circle?.name || '');
   const [polygonRegionName, setPolygonRegionName] = useState(circle?.region?.name);
   const [address, setAddress] = useState('');
@@ -121,46 +120,6 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
     }
   };
 
-  const handleExportAll = async () => {
-    try {
-      // Fetch all polygons
-      const response = await axios.get(`${GEOJSON_BACKEND_URL}/polygons`);
-      const polygons = response.data;
-
-      const allBusinesses = [];
-
-      // Iterate over each polygon
-      for (const polygon of polygons) {
-        try {
-          // Fetch businesses for the current polygon
-          const response = await axios.post(`${GEOJSON_BACKEND_URL}/businesses`, {
-            coordinates: polygon.geometry.coordinates[0],
-          });
-          const businesses = response.data;
-
-          // Map businesses with the polygon name
-          const businessesWithPolygonName = businesses.map(business => ({
-            gstin: business.gstin,
-            address: `${business.flatNo}, ${business.buildingNo}, ${business.street}, ${business.neighborhood}, ${business.district}, ${business.stateCode}, ${business.pincode}`,
-            polygonName: polygon.properties.name || polygon.name,
-          }));
-
-          // Add to all businesses list
-          allBusinesses.push(...businessesWithPolygonName);
-        } catch (error) {
-          console.error(`Error fetching businesses for polygon ${polygon.properties.name || polygon.name}:`, error);
-        }
-      }
-
-      // Create Excel file from all businesses
-      const ws = XLSX.utils.json_to_sheet(allBusinesses);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'All Businesses');
-      XLSX.writeFile(wb, 'all_businesses.xlsx');
-    } catch (error) {
-      console.error('Error exporting all businesses:', error);
-    }
-  };
 
   return (
     <Box sx={{ padding: 2 }}>
@@ -180,13 +139,7 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
             <Button variant="contained" color="secondary" onClick={handleUpdate} disabled={!selectedFeature}>Update</Button>
           </>
         )}
-        {selectedFeature && (
-          <Button variant="contained" color="warning" onClick={handleExportBusinesses}>
-            Export {entityType} Businesses
-          </Button>
-        )}
       </Box>
-      {/* <Button variant="contained" color="warning" onClick={handleExportAll} sx={{ marginBottom: 2 }}>Export All</Button> */}
 
       {businessInfo && (
         <Box sx={{ marginY: 2 }}>
