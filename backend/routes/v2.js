@@ -46,7 +46,7 @@ router.get('/api/v2/wards/:id', async (req, res) => {
 router.get('/api/v2/wards/:id/businesses', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 100;
+    const limit = parseInt(req.query.limit) || 30000;
     const skip = (page - 1) * limit;
 
     const ward = await Ward.findById(req.params.id);
@@ -365,7 +365,7 @@ router.get('/api/v2/businesses/by-ward/:wardNo', async (req, res) => {
   try {
     const businesses = await Business.find({ ward_no: parseInt(req.params.wardNo) })
       .select('name gstin latitude longitude street ward_no ward_name')
-      .limit(2000);
+      .limit(30000);
     res.json({ count: businesses.length, businesses });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch ward businesses' });
@@ -380,7 +380,7 @@ router.get('/api/v2/businesses/by-circle/:circleNo', async (req, res) => {
 
     const businesses = await Business.find({ ward_no: { $in: circle.ward_numbers || [] } })
       .select('name gstin latitude longitude street ward_no ward_name')
-      .limit(5000);
+      .limit(30000);
     res.json({ count: businesses.length, businesses });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch circle businesses' });

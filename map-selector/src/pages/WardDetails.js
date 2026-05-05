@@ -46,7 +46,7 @@ const WardDetails = () => {
       setLoadingBusinesses(true);
       console.log(`WardDetails: Fetching businesses for ward ID: ${id}`);
 
-      const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/wards/${id}/businesses?limit=5000`);
+      const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/wards/${id}/businesses?limit=30000`);
       console.log('WardDetails API Response:', response.data);
       setBusinesses(response.data.businesses || []);
       setLoadingBusinesses(false);
@@ -137,20 +137,28 @@ const WardDetails = () => {
                   <TableRow>
                     <TableCell><strong>Trade Name</strong></TableCell>
                     <TableCell><strong>GSTIN</strong></TableCell>
-                    <TableCell><strong>Area</strong></TableCell>
+                    <TableCell><strong>Address</strong></TableCell>
+                    <TableCell><strong>Pincode</strong></TableCell>
+                    <TableCell><strong>Lat</strong></TableCell>
+                    <TableCell><strong>Lng</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loadingBusinesses ? (
-                    <TableRow><TableCell colSpan={3} align="center"><CircularProgress size={20} sx={{ mt: 2 }} /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={20} sx={{ mt: 2 }} /></TableCell></TableRow>
                   ) : businesses.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} align="center">No businesses found in this ward.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} align="center">No businesses found in this ward.</TableCell></TableRow>
                   ) : (
                     businesses.map((biz) => (
                       <TableRow key={biz._id} hover>
-                        <TableCell sx={{ fontSize: '0.8rem' }}>{biz.name}</TableCell>
-                        <TableCell sx={{ fontSize: '0.8rem' }}>{biz.gstin}</TableCell>
-                        <TableCell sx={{ fontSize: '0.8rem' }}>{biz.neighborhood || biz.street || '—'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{biz.name}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{biz.gstin}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>
+                          {`${biz.flatNo || ''} ${biz.buildingName || ''} ${biz.street || ''} ${biz.neighborhood || ''}`.trim() || '—'}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{biz.pincode || '—'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{biz.latitude?.toFixed(4) || '—'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{biz.longitude?.toFixed(4) || '—'}</TableCell>
                       </TableRow>
                     ))
                   )}

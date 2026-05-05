@@ -103,7 +103,6 @@ function Circles() {
               <TableRow>
                 <TableCell><strong>Circle No</strong></TableCell>
                 <TableCell><strong>Circle Name</strong></TableCell>
-                <TableCell><strong>Zone</strong></TableCell>
                 <TableCell align="center"><strong>Wards</strong></TableCell>
                 <TableCell align="center"><strong>Businesses</strong></TableCell>
                 <TableCell align="right"><strong>Actions</strong></TableCell>
@@ -112,13 +111,13 @@ function Circles() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                     <CircularProgress size={30} />
                   </TableCell>
                 </TableRow>
               ) : circles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                     No circles found. Use "Create Circle" to group wards into circles.
                   </TableCell>
                 </TableRow>
@@ -127,7 +126,6 @@ function Circles() {
                   <TableRow key={circle._id} hover>
                     <TableCell>{circle.CIRCLE_NO || '—'}</TableCell>
                     <TableCell>{circle.CIR_NAM_NU || circle.name || '—'}</TableCell>
-                    <TableCell>{circle.Zone_Name || '—'}</TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center', maxWidth: 200, mx: 'auto' }}>
                         {circle.ward_numbers && circle.ward_numbers.length > 0 ? (

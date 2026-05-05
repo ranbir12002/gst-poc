@@ -3,15 +3,15 @@ import React, { useContext } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import LogIn from './pages/LogIn';
 import Dashboard from './pages/Dashboard';
-import Users from './pages/Users';
+// import Users from './pages/Users';
 import Wards from './pages/Wards';
 
 import Circle from './pages/Circle';
-import Profile from './pages/Profile';
+// import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
 import CircleDetails from './pages/CircleDetails';
 import SignUp from './pages/SignUp';
-import CircleManagement from './pages/CircleManagement';
+// import CircleManagement from './pages/CircleManagement';
 import WardDetails from './pages/WardDetails';
 
 
@@ -40,14 +40,14 @@ function App() {
 
         <Route element={<Navbar />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route
+          {/* <Route
             path="/users"
             element={
               <ProtectedRoute roles={['root', 'admin']}>
                 <Users />
               </ProtectedRoute>
             }
-          />
+          /> */}
           <Route
             path="/wards"
             element={
@@ -74,14 +74,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
+          {/* <Route
             path="/circle-management"
             element={
               <ProtectedRoute roles={['root', 'admin', 'region']}>
                 <CircleManagement />
               </ProtectedRoute>
             }
-          />
+          /> */}
           <Route
             path="/circles/:id"
             element={
@@ -90,7 +90,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/profile" element={<Profile />} />
+          {/* <Route path="/profile" element={<Profile />} /> */}
         </Route>
       </Routes>
     </UserProvider>

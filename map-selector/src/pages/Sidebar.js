@@ -173,14 +173,6 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
         margin="normal"
         disabled={entityType !== 'Polygon'}
       />
-      <TextField
-        label="Region Name"
-        value={polygonRegionName}
-        onChange={handleRegionNameChange}
-        fullWidth
-        margin="normal"
-        disabled={entityType !== 'Polygon'}
-      />
       <Box sx={{ display: 'flex', gap: 1, marginY: 2 }}>
         {entityType === 'Polygon' && (
           <>
@@ -210,15 +202,23 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell>Trade Name</TableCell>
                 <TableCell>GSTIN</TableCell>
                 <TableCell>Address</TableCell>
+                <TableCell>Pincode</TableCell>
+                <TableCell>Lat/Lng</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {businesses.map((business, index) => (
                 <TableRow key={index}>
-                  <TableCell>{business.name}</TableCell>
-                  <TableCell>{getAddress(business)}</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>{business.name}</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>{business.gstin}</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>{getAddress(business)}</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>{business.pincode}</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>
+                    {business.latitude?.toFixed(4)}, {business.longitude?.toFixed(4)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
