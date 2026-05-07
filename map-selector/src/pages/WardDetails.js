@@ -111,7 +111,16 @@ const WardDetails = () => {
               <Typography variant="h6">Businesses in Ward</Typography>
             </Box>
             
-            <TableContainer sx={{ flexGrow: 1 }}>
+            <TableContainer 
+              sx={{ 
+                flexGrow: 1,
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                msUserSelect: 'none',
+                MozUserSelect: 'none'
+              }}
+              onContextMenu={(e) => e.preventDefault()}
+            >
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
@@ -129,7 +138,7 @@ const WardDetails = () => {
                   ) : businesses.length === 0 ? (
                     <TableRow><TableCell colSpan={6} align="center">No businesses found in this ward.</TableCell></TableRow>
                   ) : (
-                    businesses.map((biz) => (
+                    businesses.slice(0, 100).map((biz) => (
                       <TableRow key={biz._id} hover>
                         <TableCell sx={{ fontSize: '0.75rem' }}>{biz.name}</TableCell>
                         <TableCell sx={{ fontSize: '0.75rem' }}>{biz.gstin}</TableCell>

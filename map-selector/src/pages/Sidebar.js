@@ -151,7 +151,18 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
         </Box>
       )}
       {(businesses.length > 0 || loadingBusinesses) && (
-        <TableContainer component={Paper} sx={{ marginY: 2, maxHeight: '500px' }}>
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            marginY: 2, 
+            maxHeight: '500px',
+            userSelect: 'none', // Prevent text selection
+            WebkitUserSelect: 'none',
+            msUserSelect: 'none',
+            MozUserSelect: 'none'
+          }}
+          onContextMenu={(e) => e.preventDefault()} // Prevent right-click context menu
+        >
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
@@ -171,7 +182,7 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
                   </TableCell>
                 </TableRow>
               ) : (
-                businesses.map((business, index) => (
+                businesses.slice(0, 100).map((business, index) => (
                   <TableRow key={index} hover>
                     <TableCell sx={{ fontSize: '0.75rem' }}>{business.name}</TableCell>
                     <TableCell sx={{ fontSize: '0.75rem' }}>{business.gstin}</TableCell>

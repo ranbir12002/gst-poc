@@ -23,26 +23,42 @@ function Circles() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [totalBusinesses, setTotalBusinesses] = useState(0);
+  const [integrityStatus, setIntegrityStatus] = useState({ isValid: true, overlapCount: 0 });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, circle: null });
+
+  const fetchIntegrity = async () => {
+    try {
+        const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles/check-overlaps`);
+        setIntegrityStatus(response.data);
+    } catch (error) {
+        console.error('Error checking integrity:', error);
+    }
+  };
 
   const fetchCircles = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${GEOJSON_BACKEND_URL}/api/v2/circles`, {
-        params: { page, limit: 20, search }
+        params: { limit: 1000, search } // High limit to get all matching circles
       });
       setCircles(response.data.circles || []);
-      setTotalPages(response.data.totalPages || 1);
       setTotal(response.data.total || 0);
+      
+      // Calculate total businesses in frontend
+      const bizSum = (response.data.circles || []).reduce((sum, c) => sum + (c.business_count || 0), 0);
+      setTotalBusinesses(bizSum);
+      
     } catch (error) {
       console.error('Error fetching circles:', error);
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [search]);
 
   useEffect(() => {
     fetchCircles();
+    fetchIntegrity();
   }, [fetchCircles]);
 
   const handleViewCircle = (circle) => {
@@ -55,6 +71,7 @@ function Circles() {
       await axios.delete(`${GEOJSON_BACKEND_URL}/api/v2/circles/${deleteDialog.circle._id}`);
       setDeleteDialog({ open: false, circle: null });
       fetchCircles();
+      fetchIntegrity();
     } catch (error) {
       console.error('Error deleting circle:', error);
     }
@@ -64,21 +81,39 @@ function Circles() {
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box>
-            <Typography variant="h4" gutterBottom>Circles</Typography>
-            <Typography variant="body1" color="text.secondary">
-              {total} circles created by grouping wards.
-            </Typography>
-          </Box>
-          {(user?.role === 'root' || user?.role === 'admin') && (
-            <Button
-              variant="contained"
-              startIcon={<AddCircleOutlineIcon />}
-              onClick={() => navigate('/circle-management')}
-            >
-              Create Circle
-            </Button>
-          )}
+            <Box sx={{ mb: 1, width: '100%' }}>
+                <Typography variant="h4" gutterBottom>Circles</Typography>
+                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                    <Paper sx={{ p: 2, flex: 1, textAlign: 'center', backgroundColor: '#f5f5f5' }}>
+                        <Typography variant="h6">{circles.length}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {search ? 'Matching Circles' : 'Total Circles'}
+                        </Typography>
+                    </Paper>
+                    <Paper sx={{ p: 2, flex: 1, textAlign: 'center', backgroundColor: '#e3f2fd' }}>
+                        <Typography variant="h6" color="primary">
+                            {totalBusinesses.toLocaleString()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {search ? 'Filtered Businesses' : 'Total Businesses'}
+                        </Typography>
+                    </Paper>
+                    <Paper sx={{ 
+                        p: 2, 
+                        flex: 1, 
+                        textAlign: 'center', 
+                        backgroundColor: integrityStatus.isValid ? '#e8f5e9' : '#ffebee',
+                        border: integrityStatus.isValid ? 'none' : '1px solid #f44336'
+                    }}>
+                        <Typography variant="h6" color={integrityStatus.isValid ? 'success.main' : 'error.main'}>
+                            {integrityStatus.isValid ? '100%' : `${integrityStatus.overlapCount} Overlaps`}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {integrityStatus.isValid ? 'Data Integrity' : 'Overlap Detected'}
+                        </Typography>
+                    </Paper>
+                </Box>
+            </Box>
         </Box>
 
         <TextField
@@ -86,7 +121,7 @@ function Circles() {
           variant="outlined"
           placeholder="Search by Circle Name or Number..."
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          onChange={(e) => { setSearch(e.target.value); }}
           sx={{ mb: 3, backgroundColor: 'white' }}
           InputProps={{
             startAdornment: (
@@ -97,7 +132,7 @@ function Circles() {
           }}
         />
 
-        <TableContainer component={Paper} sx={{ maxHeight: '65vh' }}>
+        <TableContainer component={Paper} sx={{ maxHeight: '70vh' }}>
           <Table stickyHeader>
             <TableHead>
               <TableRow>
@@ -118,7 +153,7 @@ function Circles() {
               ) : circles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                    No circles found. Use "Create Circle" to group wards into circles.
+                    No circles found.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -163,12 +198,6 @@ function Circles() {
             </TableBody>
           </Table>
         </TableContainer>
-
-        {totalPages > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-            <Pagination count={totalPages} page={page} onChange={(e, v) => setPage(v)} color="primary" />
-          </Box>
-        )}
       </Box>
 
       {/* Delete Confirmation Dialog */}

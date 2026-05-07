@@ -111,16 +111,23 @@ router.get('/api/v2/circles', async (req, res) => {
         ]} 
       : {};
 
-    const [circles, total] = await Promise.all([
+    const [circles, total, totalBusinessesResult] = await Promise.all([
       Circle.find(query).sort({ CIRCLE_NO: 1 }).skip(skip).limit(limit).populate('wards', 'WARD_NO NAME'),
-      Circle.countDocuments(query)
+      Circle.countDocuments(query),
+      Circle.aggregate([
+        { $match: query },
+        { $group: { _id: null, total: { $sum: "$business_count" } } }
+      ])
     ]);
+
+    const totalBusinesses = totalBusinessesResult.length > 0 ? totalBusinessesResult[0].total : 0;
 
     res.json({
       circles,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      total
+      total,
+      totalBusinesses
     });
   } catch (error) {
     console.error('Error fetching circles:', error);
@@ -500,6 +507,36 @@ router.get('/business/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching business information:', error);
     res.status(500).send('Error fetching business information');
+  }
+});
+
+// GET /api/v2/circles/check-overlaps — Validate that no two circles share the same wards
+router.get('/api/v2/circles/check-overlaps', async (req, res) => {
+  try {
+    const circles = await Circle.find({}, 'CIRCLE_NO CIR_NAM_NU ward_numbers');
+    const wardToCircles = {};
+    const overlaps = [];
+
+    circles.forEach(c => {
+      (c.ward_numbers || []).forEach(wNo => {
+        if (!wardToCircles[wNo]) wardToCircles[wNo] = [];
+        wardToCircles[wNo].push({ circleNo: c.CIRCLE_NO, circleName: c.CIR_NAM_NU });
+      });
+    });
+
+    for (const [wardNo, cs] of Object.entries(wardToCircles)) {
+      if (cs.length > 1) {
+        overlaps.push({ wardNo, circles: cs });
+      }
+    }
+
+    res.json({
+      isValid: overlaps.length === 0,
+      overlapCount: overlaps.length,
+      overlaps
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to perform overlap check' });
   }
 });
 

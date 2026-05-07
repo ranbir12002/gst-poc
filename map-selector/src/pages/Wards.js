@@ -45,9 +45,25 @@ function Wards() {
         <Container maxWidth="lg">
             <Box sx={{ mt: 4, mb: 4 }}>
                 <Typography variant="h4" gutterBottom>City Wards</Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
                     List of all 300 administrative wards and their parent circles.
                 </Typography>
+                <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+                    <Paper sx={{ p: 2, flex: 1, textAlign: 'center', backgroundColor: '#f5f5f5' }}>
+                        <Typography variant="h6">{filteredWards.length}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {searchTerm ? 'Matching Wards' : 'Total Wards'}
+                        </Typography>
+                    </Paper>
+                    <Paper sx={{ p: 2, flex: 1, textAlign: 'center', backgroundColor: '#e3f2fd' }}>
+                        <Typography variant="h6" color="primary">
+                            {filteredWards.reduce((sum, w) => sum + (w.business_count || 0), 0).toLocaleString()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {searchTerm ? 'Filtered Businesses' : 'Total Businesses'}
+                        </Typography>
+                    </Paper>
+                </Box>
 
                 <TextField
                     fullWidth
