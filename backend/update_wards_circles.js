@@ -19,38 +19,43 @@ async function migrate() {
     const lines = csvData.split('\n');
     
     // skip line 0 (Title) and line 1 (Headers)
-    let currentCircleNo = null;
-    let currentCircleName = null;
-    let currentCirNamNu = null;
     
-    const circleDataMap = {}; // Map of circle_no -> { name, CIR_NAM_NU, wards: [] }
+    const circleDataMap = {}; // Map of CT Circle name -> { name, zone, circleNo, cirNamNu, wards: [] }
 
     for (let i = 2; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
       
       const parts = line.split(',');
-      if (parts.length < 5) continue;
+      if (parts.length < 4) continue;
       
       const slNo = parts[0];
-      const ctDivision = parts[1];
-      const ctCircle = parts[2];
-      const wardStr = parts[3]; // e.g. "1 - Keesara"
-      let circleStr = parts[4]; // e.g. "1 - Keesara"
+      const ctDivision = parts[1] ? parts[1].trim() : '';
+      const ctCircle = parts[2] ? parts[2].trim() : '';
+      const wardStr = parts[3] ? parts[3].trim() : '';
+      let circleStr = parts[4] ? parts[4].trim() : '';
       
-      if (circleStr && circleStr.trim() !== '') {
-        // parse new circle
-        // Handle em dash and normal dash
+      if (!ctCircle || !wardStr) continue;
+
+      if (!circleDataMap[ctCircle]) {
+          circleDataMap[ctCircle] = {
+              name: ctCircle,
+              zone: ctDivision,
+              circleNo: null,
+              cirNamNu: null,
+              wards: []
+          };
+      }
+      
+      if (circleStr && !circleDataMap[ctCircle].circleNo) {
+        // parse circle number if available in this row
         const dashIndex = circleStr.indexOf('-');
         const emDashIndex = circleStr.indexOf('–');
         let splitIndex = dashIndex !== -1 ? dashIndex : emDashIndex;
         
         if (splitIndex !== -1) {
-            currentCircleNo = parseInt(circleStr.substring(0, splitIndex).trim(), 10);
-            currentCircleName = circleStr.substring(splitIndex + 1).trim();
-            currentCirNamNu = circleStr.trim();
-        } else {
-            console.warn(`Could not parse circle: ${circleStr}`);
+            circleDataMap[ctCircle].circleNo = parseInt(circleStr.substring(0, splitIndex).trim(), 10);
+            circleDataMap[ctCircle].cirNamNu = circleStr.trim();
         }
       }
       
@@ -67,16 +72,8 @@ async function migrate() {
           wardName = wardStr.substring(wSplitIndex + 1).trim();
       }
       
-      if (wardNo && currentCircleNo) {
-          if (!circleDataMap[currentCircleNo]) {
-              circleDataMap[currentCircleNo] = {
-                  CIRCLE_NO: currentCircleNo,
-                  name: currentCircleName,
-                  CIR_NAM_NU: currentCirNamNu,
-                  wards: []
-              };
-          }
-          circleDataMap[currentCircleNo].wards.push({
+      if (wardNo) {
+          circleDataMap[ctCircle].wards.push({
               WARD_NO: wardNo,
               NAME: wardName
           });
@@ -84,27 +81,44 @@ async function migrate() {
     }
     
     // Now update the DB
-    for (const circleNo of Object.keys(circleDataMap)) {
-        const cData = circleDataMap[circleNo];
-        console.log(`Processing Circle ${cData.CIRCLE_NO} - ${cData.name} with ${cData.wards.length} wards`);
+    let unknownCircleCounter = 10000;
+    for (const ctName of Object.keys(circleDataMap)) {
+        const cData = circleDataMap[ctName];
         
-        let circle = await Circle.findOne({ CIRCLE_NO: cData.CIRCLE_NO });
+        if (!cData.circleNo) {
+            cData.circleNo = unknownCircleCounter++;
+            console.log(`  Assigning temp CIRCLE_NO ${cData.circleNo} to ${ctName}`);
+        }
+
+        console.log(`Processing Circle: ${ctName} (Zone: ${cData.zone}) with ${cData.wards.length} wards`);
+        
+        // Find circle by name or CIRCLE_NO
+        let circle = await Circle.findOne({ name: ctName });
+        if (!circle) {
+            circle = await Circle.findOne({ CIRCLE_NO: cData.circleNo });
+        }
+
         if (!circle) {
             circle = new Circle({
-                CIRCLE_NO: cData.CIRCLE_NO,
-                name: cData.name,
-                CIR_NAM_NU: cData.CIR_NAM_NU,
+                name: ctName,
+                CIRCLE_NO: cData.circleNo,
+                CIR_NAM_NU: cData.cirNamNu || `${cData.circleNo} - ${ctName}`,
+                Zone_Name: cData.zone,
                 ward_numbers: [],
                 ward_names: [],
                 wards: []
             });
         }
         
-        circle.name = cData.name;
-        circle.CIR_NAM_NU = cData.CIR_NAM_NU;
+        circle.name = ctName;
+        circle.Zone_Name = cData.zone;
+        circle.CIRCLE_NO = cData.circleNo;
+        if (cData.cirNamNu) circle.CIR_NAM_NU = cData.cirNamNu;
+        else if (!circle.CIR_NAM_NU) circle.CIR_NAM_NU = `${cData.circleNo} - ${ctName}`;
+        
         circle.ward_numbers = [];
         circle.ward_names = [];
-        circle.wards = []; // Reset wards to reconstruct
+        circle.wards = []; 
         circle.ward_count = cData.wards.length;
         
         // Save circle first to get its _id
@@ -115,15 +129,15 @@ async function migrate() {
             let ward = await Ward.findOne({ WARD_NO: wData.WARD_NO });
             if (ward) {
                 ward.circle = circle._id;
-                ward.CIRCLE_NO = cData.CIRCLE_NO;
-                ward.CIR_NAM_NU = cData.CIR_NAM_NU;
+                ward.CIRCLE_NO = circle.CIRCLE_NO;
+                ward.CIR_NAM_NU = circle.CIR_NAM_NU;
                 await ward.save();
                 
                 circle.wards.push(ward._id);
                 circle.ward_numbers.push(ward.WARD_NO);
                 circle.ward_names.push(ward.NAME);
             } else {
-                console.warn(`Ward ${wData.WARD_NO} not found in DB!`);
+                console.warn(`  Ward ${wData.WARD_NO} not found in DB!`);
             }
         }
         

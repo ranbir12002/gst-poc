@@ -27,6 +27,7 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
   const [allWards, setAllWards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [localBusinesses, setLocalBusinesses] = useState([]);
+  const [mapReady, setMapReady] = useState(false);
 
 
   // Fetch all wards on mount (or use passed-in wards for circle detail view)
@@ -128,7 +129,8 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
       // Business source (empty initially)
       map.addSource('businesses', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
+        data: { type: 'FeatureCollection', features: [] },
+        generateId: true
       });
 
       // Business layer (visible when data is loaded)
@@ -221,7 +223,7 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
           try {
             const targetId = props.wardId?.toString();
             const response = await axios.get(
-              `${GEOJSON_BACKEND_URL}/api/v2/wards/${targetId}/businesses?limit=500`
+              `${GEOJSON_BACKEND_URL}/api/v2/wards/${targetId}/businesses?limit=30000`
             );
             
             const loadedBusinesses = decryptData(response.data.businesses) || [];
@@ -269,6 +271,9 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
       if (!bounds.isEmpty()) {
         map.fitBounds(bounds, { padding: 50 });
       }
+
+      // Mark map as ready so business data can sync
+      setMapReady(true);
     });
 
     return () => {
@@ -303,30 +308,40 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
   }, [allWards]);
 
   // Sync businesses to map source
+  const [plottedCount, setPlottedCount] = useState(0);
+  const [totalBizCount, setTotalBizCount] = useState(0);
+  const [missingCoordCount, setMissingCoordCount] = useState(0);
+
   useEffect(() => {
-    if (mapRef.current && mapRef.current.getSource('businesses')) {
-      const bizList = propsBusinesses || localBusinesses;
-      const geojson = {
-        type: 'FeatureCollection',
-        features: bizList
-          .filter(b => b.latitude && b.longitude)
-          .map(b => ({
-            type: 'Feature',
-            id: b._id,
-            geometry: {
-              type: 'Point',
-              coordinates: [b.longitude, b.latitude]
-            },
-            properties: {
-              name: b.name,
-              gstin: b.gstin,
-              address: `${b.buildingName || ''} ${b.street || ''}`.trim()
-            }
-          }))
-      };
-      mapRef.current.getSource('businesses').setData(geojson);
-    }
-  }, [propsBusinesses, localBusinesses]);
+    if (!mapReady || !mapRef.current || !mapRef.current.getSource('businesses')) return;
+
+    const bizList = propsBusinesses || localBusinesses;
+    const withCoords = bizList.filter(b => b.latitude != null && b.longitude != null && b.latitude !== 0 && b.longitude !== 0);
+    const missing = bizList.length - withCoords.length;
+
+    setPlottedCount(withCoords.length);
+    setTotalBizCount(bizList.length);
+    setMissingCoordCount(missing);
+
+    console.log(`[MapComponent] Plotting businesses: ${withCoords.length} with coords out of ${bizList.length} total (${missing} missing coordinates)`);
+
+    const geojson = {
+      type: 'FeatureCollection',
+      features: withCoords.map((b, index) => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [b.longitude, b.latitude]
+        },
+        properties: {
+          name: b.name,
+          gstin: b.gstin,
+          address: `${b.buildingName || ''} ${b.street || ''}`.trim()
+        }
+      }))
+    };
+    mapRef.current.getSource('businesses').setData(geojson);
+  }, [propsBusinesses, localBusinesses, mapReady]);
 
 
 
@@ -363,6 +378,23 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
           </div>
         </div>
       )}
+      {/* Business count badge */}
+      {totalBizCount > 0 && (
+        <div style={{
+          position: 'absolute', top: 12, right: 12, zIndex: 1,
+          backgroundColor: missingCoordCount > 0 ? 'rgba(255,152,0,0.95)' : 'rgba(76,175,80,0.95)',
+          color: '#fff', padding: '8px 14px',
+          borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.2)', fontSize: 12,
+          fontWeight: 500
+        }}>
+          <div style={{ fontWeight: 'bold', fontSize: 13 }}>📍 {plottedCount.toLocaleString()} / {totalBizCount.toLocaleString()} plotted</div>
+          {missingCoordCount > 0 && (
+            <div style={{ fontSize: 11, opacity: 0.9, marginTop: 2 }}>
+              ⚠ {missingCoordCount.toLocaleString()} missing coordinates
+            </div>
+          )}
+        </div>
+      )}
       {/* Legend overlay */}
       <div style={{
         position: 'absolute', bottom: 16, right: 16, zIndex: 1,
@@ -374,9 +406,13 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
           <span style={{ width: 14, height: 14, backgroundColor: '#2196f3', opacity: 0.5, display: 'inline-block', borderRadius: 2 }} />
           Unassigned Ward
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <span style={{ width: 14, height: 14, backgroundColor: '#4caf50', opacity: 0.5, display: 'inline-block', borderRadius: 2 }} />
           Assigned to Circle
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 10, height: 10, backgroundColor: '#f44336', display: 'inline-block', borderRadius: '50%', border: '1px solid #fff' }} />
+          Business
         </div>
       </div>
     </div>
