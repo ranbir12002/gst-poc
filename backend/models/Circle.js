@@ -8,6 +8,10 @@ const CircleSchema = new mongoose.Schema({
   Zone_Name: { type: String },
   CORPORATE: { type: String },
 
+  // Division hierarchy mapping
+  division: { type: mongoose.Schema.Types.ObjectId, ref: 'Division' },
+  division_name: { type: String },
+
   // A circle is a COLLECTION of wards — this is the source of truth
   wards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Ward' }],
   ward_count: { type: Number, default: 0 },

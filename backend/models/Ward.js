@@ -20,7 +20,7 @@ const WardSchema = new mongoose.Schema({
   status: { type: String, enum: ['active', 'inactive'], default: 'active' }
 }, { timestamps: true });
 
-WardSchema.index({ geometry: '2dsphere' });
+// WardSchema.index({ geometry: '2dsphere' });
 WardSchema.index({ CIRCLE_NO: 1 });
 WardSchema.index({ WARD_NO: 1 });
 

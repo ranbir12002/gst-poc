@@ -13,6 +13,7 @@ import CircleDetails from './pages/CircleDetails';
 import SignUp from './pages/SignUp';
 // import CircleManagement from './pages/CircleManagement';
 import WardDetails from './pages/WardDetails';
+import AllMap from './pages/AllMap';
 
 
 import { UserProvider, UserContext } from './context/UserContext';
@@ -87,6 +88,14 @@ function App() {
             element={
               <ProtectedRoute roles={['root', 'admin', 'region', 'circle']}>
                 <CircleDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/all-map"
+            element={
+              <ProtectedRoute roles={['root', 'admin', 'region', 'circle']}>
+                <AllMap />
               </ProtectedRoute>
             }
           />

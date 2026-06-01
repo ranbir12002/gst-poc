@@ -9,6 +9,7 @@ const GeoJSON = require('../models/GeoJSON');
 const Circle = require('../models/Circle');
 const Ward = require('../models/Ward');
 const User = require('../models/User');
+const Division = require('../models/Division');
 const { encryptData } = require('../utils/encryption');
 
 // ============================================================
@@ -24,7 +25,7 @@ router.get('/api/v2/wards', async (req, res) => {
 
     const wards = await Ward.find(query)
       .sort({ WARD_NO: 1 })
-      .populate('circle', 'CIR_NAM_NU CIRCLE_NO name');
+      .populate('circle', 'CIR_NAM_NU CIRCLE_NO name division_name');
     res.json({ wards, total: wards.length });
   } catch (error) {
     console.error('Error fetching wards:', error);
@@ -89,6 +90,21 @@ router.get('/api/v2/wards/:id/businesses', async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch businesses' });
+  }
+});
+
+// ============================================================
+//  DIVISION ENDPOINTS
+// ============================================================
+
+// GET /api/v2/divisions — List all divisions with circle mappings
+router.get('/api/v2/divisions', async (req, res) => {
+  try {
+    const divisions = await Division.find({}).sort({ name: 1 });
+    res.json(divisions);
+  } catch (error) {
+    console.error('Error fetching divisions:', error);
+    res.status(500).json({ error: 'Failed to fetch divisions' });
   }
 });
 
