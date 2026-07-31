@@ -19,7 +19,7 @@ const OSM_STYLE = {
   layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
 };
 
-const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBusinesses, circle, wards, businesses: propsBusinesses }) => {
+const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBusinesses, circle, wards, businesses: propsBusinesses, focusedBusiness }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const { user } = useContext(UserContext);
@@ -342,6 +342,33 @@ const MapComponent = ({ setFeatures, setSelectedFeature, setBusinessInfo, setBus
     };
     mapRef.current.getSource('businesses').setData(geojson);
   }, [propsBusinesses, localBusinesses, mapReady]);
+
+  // Fly to a business selected from a search box (WardDetails/CircleDetails)
+  const focusPopupRef = useRef(null);
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !focusedBusiness) return;
+    if (focusedBusiness.latitude == null || focusedBusiness.longitude == null) return;
+
+    if (focusPopupRef.current) {
+      focusPopupRef.current.remove();
+    }
+
+    mapRef.current.flyTo({
+      center: [focusedBusiness.longitude, focusedBusiness.latitude],
+      zoom: 17,
+      essential: true
+    });
+
+    focusPopupRef.current = new maplibregl.Popup()
+      .setLngLat([focusedBusiness.longitude, focusedBusiness.latitude])
+      .setHTML(`
+        <div style="font-family: sans-serif; padding: 5px;">
+          <strong style="color: #f44336;">${focusedBusiness.name || ''}</strong><br/>
+          <span style="font-size: 0.8rem; color: #666;">GSTIN: ${focusedBusiness.gstin || '—'}</span>
+        </div>
+      `)
+      .addTo(mapRef.current);
+  }, [focusedBusiness, mapReady]);
 
 
 

@@ -15,6 +15,7 @@ import SignUp from './pages/SignUp';
 import WardDetails from './pages/WardDetails';
 import AllMap from './pages/AllMap';
 import Rural from './pages/Rural';
+import Search from './pages/Search';
 
 
 import { UserProvider, UserContext } from './context/UserContext';
@@ -105,6 +106,14 @@ function App() {
             element={
               <ProtectedRoute roles={['root', 'admin', 'region', 'circle']}>
                 <Rural />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <ProtectedRoute roles={['root', 'admin', 'region', 'circle']}>
+                <Search />
               </ProtectedRoute>
             }
           />

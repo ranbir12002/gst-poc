@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Grid, Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, CircularProgress } from '@mui/material';
+import { Container, Grid, Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, CircularProgress, TextField, InputAdornment } from '@mui/material';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { GEOJSON_BACKEND_URL } from '../config';
@@ -7,6 +7,7 @@ import MapComponent from './MapComponent';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BusinessIcon from '@mui/icons-material/Business';
 import MapIcon from '@mui/icons-material/Map';
+import SearchIcon from '@mui/icons-material/Search';
 import { decryptData } from '../utils/encryption';
 
 const WardDetails = () => {
@@ -17,6 +18,8 @@ const WardDetails = () => {
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(!ward);
   const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [businessSearch, setBusinessSearch] = useState('');
+  const [focusedBusiness, setFocusedBusiness] = useState(null);
 
   useEffect(() => {
     if (!ward) {
@@ -70,6 +73,13 @@ const WardDetails = () => {
     return <Typography variant="h6" sx={{ p: 4 }}>Ward not found.</Typography>;
   }
 
+  const filteredBusinesses = businessSearch
+    ? businesses.filter(biz =>
+        biz.name?.toLowerCase().includes(businessSearch.toLowerCase()) ||
+        biz.gstin?.toLowerCase().includes(businessSearch.toLowerCase())
+      )
+    : businesses;
+
   return (
     <Container maxWidth={false} sx={{ py: 3, height: 'calc(100vh - 64px)' }}>
       <Button 
@@ -107,10 +117,25 @@ const WardDetails = () => {
           </Paper>
 
           <Paper elevation={3} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', borderRadius: 2, overflow: 'hidden' }}>
-            <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
-              <Typography variant="h6">Businesses in Ward</Typography>
+            <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>Businesses in Ward</Typography>
+              <TextField
+                fullWidth
+                size="small"
+                variant="outlined"
+                placeholder="Search by Trade Name or GSTIN..."
+                value={businessSearch}
+                onChange={(e) => setBusinessSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
             </Box>
-            
+
             <TableContainer 
               sx={{ 
                 flexGrow: 1,
@@ -135,11 +160,17 @@ const WardDetails = () => {
                 <TableBody>
                   {loadingBusinesses ? (
                     <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={20} sx={{ mt: 2 }} /></TableCell></TableRow>
-                  ) : businesses.length === 0 ? (
+                  ) : filteredBusinesses.length === 0 ? (
                     <TableRow><TableCell colSpan={6} align="center">No businesses found in this ward.</TableCell></TableRow>
                   ) : (
-                    businesses.slice(0, 100).map((biz) => (
-                      <TableRow key={biz._id} hover>
+                    filteredBusinesses.slice(0, 100).map((biz) => (
+                      <TableRow
+                        key={biz._id}
+                        hover
+                        selected={focusedBusiness?._id === biz._id}
+                        onClick={() => setFocusedBusiness(biz)}
+                        sx={{ cursor: 'pointer' }}
+                      >
                         <TableCell sx={{ fontSize: '0.75rem' }}>{biz.name}</TableCell>
                         <TableCell sx={{ fontSize: '0.75rem' }}>{biz.gstin}</TableCell>
                         <TableCell sx={{ fontSize: '0.75rem' }}>
@@ -160,13 +191,14 @@ const WardDetails = () => {
         {/* Right Side: Map */}
         <Grid item xs={12} md={7} sx={{ height: '100%' }}>
           <Paper elevation={3} sx={{ height: '100%', borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
-            <MapComponent 
-              wards={[ward]} 
+            <MapComponent
+              wards={[ward]}
               businesses={businesses}
-              setBusinesses={setBusinesses} 
-              setBusinessInfo={() => {}} 
-              setSelectedFeature={() => {}} 
+              setBusinesses={setBusinesses}
+              setBusinessInfo={() => {}}
+              setSelectedFeature={() => {}}
               setFeatures={() => {}}
+              focusedBusiness={focusedBusiness}
             />
 
           </Paper>

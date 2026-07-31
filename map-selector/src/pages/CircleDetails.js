@@ -19,6 +19,7 @@ const CircleDetails = () => {
   const [businesses, setBusinesses] = useState([]);
   const [loadingBusinesses, setLoadingBusinesses] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [focusedBusiness, setFocusedBusiness] = useState(null);
 
   useEffect(() => {
     const fetchWards = async () => {
@@ -84,6 +85,8 @@ const CircleDetails = () => {
             businesses={businesses}
             loadingBusinesses={loadingBusinesses}
             circle={circle}
+            onSelectBusiness={setFocusedBusiness}
+            focusedBusiness={focusedBusiness}
           />
         </Grid>
         <Grid item xs={9} style={{ height: 'calc(100vh - 64px)' }}>
@@ -97,6 +100,7 @@ const CircleDetails = () => {
               businesses={businesses}
               circle={circle} // Pass the circle data as a prop
               wards={wards} // Pass the wards belonging to this circle
+              focusedBusiness={focusedBusiness}
             />
 
             <Button className={`sidebar-toggle ${sidebarOpen ? 'open' : 'close'}`} onClick={() => setSidebarOpen(prev => !prev)}>

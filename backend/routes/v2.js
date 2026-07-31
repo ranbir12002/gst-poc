@@ -451,6 +451,45 @@ router.get('/api/v2/businesses/rural', async (req, res) => {
   }
 });
 
+// GET /api/v2/businesses/search — Global search across all businesses by
+// name, GSTIN, or district. Backs the navbar search bar.
+router.get('/api/v2/businesses/search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q) {
+      return res.json({ businesses: encryptData([]), totalPages: 0, currentPage: 1, total: 0, isEncrypted: true });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const query = {
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { gstin: { $regex: q, $options: 'i' } },
+        { district: { $regex: q, $options: 'i' } }
+      ]
+    };
+
+    const [businesses, total] = await Promise.all([
+      Business.find(query).skip(skip).limit(limit),
+      Business.countDocuments(query)
+    ]);
+
+    res.json({
+      businesses: encryptData(businesses),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total,
+      isEncrypted: true
+    });
+  } catch (error) {
+    console.error('Error searching businesses:', error);
+    res.status(500).json({ error: 'Failed to search businesses' });
+  }
+});
+
 // GET /api/v2/businesses/:id — Get single business detail
 router.get('/api/v2/businesses/:id', async (req, res) => {
   try {

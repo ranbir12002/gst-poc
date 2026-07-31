@@ -23,7 +23,6 @@ function Circles() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [totalBusinesses, setTotalBusinesses] = useState(0);
   const [integrityStatus, setIntegrityStatus] = useState({ isValid: true, overlapCount: 0 });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, circle: null });
 
@@ -44,11 +43,6 @@ function Circles() {
       });
       setCircles(response.data.circles || []);
       setTotal(response.data.total || 0);
-      
-      // Calculate total businesses in frontend
-      const bizSum = (response.data.circles || []).reduce((sum, c) => sum + (c.business_count || 0), 0);
-      setTotalBusinesses(bizSum);
-      
     } catch (error) {
       console.error('Error fetching circles:', error);
     } finally {
@@ -90,15 +84,7 @@ function Circles() {
                             {search ? 'Matching Circles' : 'Total Circles'}
                         </Typography>
                     </Paper>
-                    <Paper sx={{ p: 2, flex: 1, textAlign: 'center', backgroundColor: '#e3f2fd' }}>
-                        <Typography variant="h6" color="primary">
-                            {totalBusinesses.toLocaleString()}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            {search ? 'Filtered Businesses' : 'Total Businesses'}
-                        </Typography>
-                    </Paper>
-                    <Paper sx={{ 
+                    <Paper sx={{
                         p: 2, 
                         flex: 1, 
                         textAlign: 'center', 
@@ -139,20 +125,19 @@ function Circles() {
                 <TableCell><strong>Circle No</strong></TableCell>
                 <TableCell><strong>Circle Name</strong></TableCell>
                 <TableCell align="center"><strong>Wards</strong></TableCell>
-                <TableCell align="center"><strong>Businesses</strong></TableCell>
                 <TableCell align="right"><strong>Actions</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                     <CircularProgress size={30} />
                   </TableCell>
                 </TableRow>
               ) : circles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                     No circles found.
                   </TableCell>
                 </TableRow>
@@ -174,9 +159,6 @@ function Circles() {
                           <Chip label={`+${circle.ward_numbers.length - 5}`} size="small" sx={{ fontSize: '0.7rem' }} />
                         )}
                       </Box>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip label={circle.business_count || 0} color="secondary" size="small" />
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title="View Details">

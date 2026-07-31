@@ -55,14 +55,6 @@ function Wards() {
                             {searchTerm ? 'Matching Wards' : 'Total Wards'}
                         </Typography>
                     </Paper>
-                    <Paper sx={{ p: 2, flex: 1, textAlign: 'center', backgroundColor: '#e3f2fd' }}>
-                        <Typography variant="h6" color="primary">
-                            {filteredWards.reduce((sum, w) => sum + (w.business_count || 0), 0).toLocaleString()}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            {searchTerm ? 'Filtered Businesses' : 'Total Businesses'}
-                        </Typography>
-                    </Paper>
                 </Box>
 
                 <TextField
@@ -89,15 +81,14 @@ function Wards() {
                                 <TableCell><strong>Ward Name</strong></TableCell>
                                 <TableCell><strong>Parent Circle</strong></TableCell>
                                 <TableCell><strong>Circle No</strong></TableCell>
-                                <TableCell align="center"><strong>Businesses</strong></TableCell>
                                 <TableCell align="right"><strong>Actions</strong></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {loading ? (
-                                <TableRow><TableCell colSpan={6} align="center">Loading Wards...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} align="center">Loading Wards...</TableCell></TableRow>
                             ) : filteredWards.length === 0 ? (
-                                <TableRow><TableCell colSpan={6} align="center">No wards found matching your search.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} align="center">No wards found matching your search.</TableCell></TableRow>
                             ) : (
                                 filteredWards.map((ward) => (
                                     <TableRow key={ward._id} hover>
@@ -108,9 +99,6 @@ function Wards() {
                                         </TableCell>
                                         <TableCell>
                                             {ward.circle?.CIRCLE_NO || ward.CIRCLE_NO || 'N/A'}
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            {ward.business_count != null ? ward.business_count.toLocaleString() : '0'}
                                         </TableCell>
                                         <TableCell align="right">
                                             <Button 

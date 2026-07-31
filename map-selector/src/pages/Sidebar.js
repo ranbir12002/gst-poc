@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { GEOJSON_BACKEND_URL } from '../config';
-import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress } from '@mui/material';
+import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, InputAdornment } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 
-const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeature, refreshMap, businesses, loadingBusinesses, circle }) => {
+const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeature, refreshMap, businesses, loadingBusinesses, circle, onSelectBusiness, focusedBusiness }) => {
   const [polygonName, setPolygonName] = useState(circle?.name || '');
   const [polygonRegionName, setPolygonRegionName] = useState(circle?.region?.name);
   const [address, setAddress] = useState('');
   const [entityType, setEntityType] = useState('Circle');
+  const [businessSearch, setBusinessSearch] = useState('');
 
   useEffect(() => {
     if (selectedFeature) {
@@ -151,52 +153,83 @@ const Sidebar = ({ features, businessInfo, selectedFeature, updateSelectedFeatur
         </Box>
       )}
       {(businesses.length > 0 || loadingBusinesses) && (
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            marginY: 2, 
-            maxHeight: '500px',
-            userSelect: 'none', // Prevent text selection
-            WebkitUserSelect: 'none',
-            msUserSelect: 'none',
-            MozUserSelect: 'none'
-          }}
-          onContextMenu={(e) => e.preventDefault()} // Prevent right-click context menu
-        >
-          <Table stickyHeader size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Trade Name</TableCell>
-                <TableCell>GSTIN</TableCell>
-                <TableCell>Address</TableCell>
-                <TableCell>Pincode</TableCell>
-                <TableCell>Lat/Lng</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loadingBusinesses ? (
+        <>
+          <TextField
+            fullWidth
+            size="small"
+            variant="outlined"
+            placeholder="Search by Trade Name or GSTIN..."
+            value={businessSearch}
+            onChange={(e) => setBusinessSearch(e.target.value)}
+            sx={{ mt: 1 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <TableContainer
+            component={Paper}
+            sx={{
+              marginY: 2,
+              maxHeight: '500px',
+              userSelect: 'none', // Prevent text selection
+              WebkitUserSelect: 'none',
+              msUserSelect: 'none',
+              MozUserSelect: 'none'
+            }}
+            onContextMenu={(e) => e.preventDefault()} // Prevent right-click context menu
+          >
+            <Table stickyHeader size="small">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                    <CircularProgress size={30} />
-                    <Typography variant="body2" sx={{ mt: 2 }}>Loading businesses...</Typography>
-                  </TableCell>
+                  <TableCell>Trade Name</TableCell>
+                  <TableCell>GSTIN</TableCell>
+                  <TableCell>Address</TableCell>
+                  <TableCell>Pincode</TableCell>
+                  <TableCell>Lat/Lng</TableCell>
                 </TableRow>
-              ) : (
-                businesses.slice(0, 100).map((business, index) => (
-                  <TableRow key={index} hover>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{business.name}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{business.gstin}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{getAddress(business)}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{business.pincode}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>
-                      {business.latitude?.toFixed(4)}, {business.longitude?.toFixed(4)}
+              </TableHead>
+              <TableBody>
+                {loadingBusinesses ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <CircularProgress size={30} />
+                      <Typography variant="body2" sx={{ mt: 2 }}>Loading businesses...</Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  businesses
+                    .filter(business =>
+                      !businessSearch ||
+                      business.name?.toLowerCase().includes(businessSearch.toLowerCase()) ||
+                      business.gstin?.toLowerCase().includes(businessSearch.toLowerCase())
+                    )
+                    .slice(0, 100)
+                    .map((business, index) => (
+                      <TableRow
+                        key={business._id || index}
+                        hover
+                        selected={focusedBusiness?._id && focusedBusiness._id === business._id}
+                        onClick={() => onSelectBusiness && onSelectBusiness(business)}
+                        sx={{ cursor: onSelectBusiness ? 'pointer' : 'default' }}
+                      >
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{business.name}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{business.gstin}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{getAddress(business)}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>{business.pincode}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem' }}>
+                          {business.latitude?.toFixed(4)}, {business.longitude?.toFixed(4)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
       )}
     </Box>
   );
