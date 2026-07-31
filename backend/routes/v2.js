@@ -413,6 +413,44 @@ router.get('/api/v2/businesses/by-circle/:circleNo', async (req, res) => {
   }
 });
 
+// GET /api/v2/businesses/rural — Paginated list of businesses with no ward
+// (Division/Circle/Ward = "Rural" in the source CSV). Excludes other
+// unmatched special zones like BHEL/GMR Airport, which have a real
+// division/circle, just no ward polygon.
+router.get('/api/v2/businesses/rural', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    const query = { division_name: 'Rural' };
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { gstin: { $regex: search, $options: 'i' } },
+        { district: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const [businesses, total] = await Promise.all([
+      Business.find(query).skip(skip).limit(limit),
+      Business.countDocuments(query)
+    ]);
+
+    res.json({
+      businesses: encryptData(businesses),
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total,
+      isEncrypted: true
+    });
+  } catch (error) {
+    console.error('Error fetching rural businesses:', error);
+    res.status(500).json({ error: 'Failed to fetch rural businesses' });
+  }
+});
+
 // GET /api/v2/businesses/:id — Get single business detail
 router.get('/api/v2/businesses/:id', async (req, res) => {
   try {
@@ -433,17 +471,19 @@ router.get('/api/v2/businesses/:id', async (req, res) => {
 // GET /api/v2/stats — Dashboard stats
 router.get('/api/v2/stats', async (req, res) => {
   try {
-    const [circleCount, wardCount, businessCount, unassignedWards] = await Promise.all([
+    const [circleCount, wardCount, businessCount, unassignedWards, ruralBusinessCount] = await Promise.all([
       Circle.countDocuments(),
       Ward.countDocuments(),
       Business.countDocuments(),
-      Ward.countDocuments({ circle: null })
+      Ward.countDocuments({ circle: null }),
+      Business.countDocuments({ division_name: 'Rural' })
     ]);
-    res.json({ 
-      circles: circleCount, 
-      wards: wardCount, 
+    res.json({
+      circles: circleCount,
+      wards: wardCount,
       businesses: businessCount,
-      unassignedWards 
+      unassignedWards,
+      ruralBusinesses: ruralBusinessCount
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch stats' });

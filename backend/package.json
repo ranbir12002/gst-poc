@@ -18,15 +18,10 @@
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
     "csv-parser": "^3.2.0",
-    "csv-writer": "^1.6.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "fast-csv": "^5.0.5",
     "jsonwebtoken": "^9.0.2",
-    "jsts": "^2.12.1",
-    "mongoose": "^8.5.1",
-    "node-geocoder": "^4.4.1",
-    "xlsx": "^0.18.5"
+    "mongoose": "^8.5.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

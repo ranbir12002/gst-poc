@@ -19,6 +19,10 @@ const BusinessSchema = new mongoose.Schema({
   circle_no: { type: Number },
   ward_name: { type: String },
   circle_name: { type: String },
+  // Denormalized from the source CSV directly — not every business falls
+  // inside a mapped ward (e.g. "Rural"), so this is kept even when
+  // ward/circle refs above are unset.
+  division_name: { type: String },
   // Location
   latitude: { type: Number },
   longitude: { type: Number },

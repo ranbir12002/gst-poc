@@ -1,13 +1,21 @@
 /**
  * upload_businesses.js
- * 
- * Uploads businesses from data/matched_wards.csv into MongoDB.
- * Each business is linked to its ward via the ward_id column in the CSV.
- * 
+ *
+ * Uploads businesses from new_data/full_data.csv into MongoDB.
+ * Requires migrate_wards_circles.js and migrate_divisions.js to have
+ * already been run.
+ *
  * CSV columns: S.No., GST_Id, GSTIN, Trade Name, Address, Building Number,
- *              Building Name, Flat No., Location, Street, Pincode, 
- *              District Name, lat, long, ward_id, ward_name, match_method, snap_distance_m
- * 
+ *              Building Name, Flat No., Location, Street, Pincode,
+ *              District Name, lat, long, Division, Circle, Ward
+ *
+ * The CSV's Division/Circle/Ward columns are trusted and stored as-is
+ * (division_name/circle_name/ward_name) on every row. The Ward column is
+ * additionally matched (case-insensitively) against Ward.NAME to resolve
+ * the ward/circle ObjectId refs and ward_no/circle_no — roughly 30% of
+ * rows are "Rural" or other out-of-jurisdiction values with no matching
+ * ward, and are still imported with those refs left unset.
+ *
  * Usage: node upload_businesses.js
  */
 const mongoose = require('mongoose');
@@ -21,55 +29,68 @@ dotenv.config();
 const Business = require('./models/Business');
 const Ward = require('./models/Ward');
 
-const CSV_FILE = path.join(__dirname, '..', 'data', 'matched_wards.csv');
-const BATCH_SIZE = 500;
+const CSV_FILE = path.join(__dirname, '..', 'new_data', 'full_data.csv');
+const BATCH_SIZE = 1000;
+
+// The CSV still uses ward 304's old name ("304-Narsapur") in its Ward
+// column, but wards.json has since renamed it to "304-Toopran" — these
+// rows have a real Division/Circle ("Future City"/"Toopran"), they're not
+// Rural, just a stale ward label. Keyed/valued uppercase to match wardMap.
+const WARD_NAME_ALIASES = {
+  '304-NARSAPUR': '304-TOOPRAN'
+};
 
 async function uploadBusinesses() {
   try {
-    // Connect to MongoDB
     await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB');
 
-    // Build a ward lookup map: WARD_NO -> Ward document
     console.log('Building ward lookup map...');
-    const allWards = await Ward.find({}, '_id WARD_NO NAME CIRCLE_NO CIR_NAM_NU');
+    const allWards = await Ward.find({}, '_id WARD_NO NAME CIRCLE_NO circle');
     const wardMap = new Map();
     allWards.forEach(w => {
-      wardMap.set(w.WARD_NO, w);
+      wardMap.set(w.NAME.trim().toUpperCase(), w);
     });
     console.log(`Loaded ${wardMap.size} wards into lookup map`);
 
-    // Clear existing businesses
     const deleted = await Business.deleteMany({});
     console.log(`Cleared ${deleted.deletedCount} existing business records`);
 
-    // Parse CSV and insert in batches
     let batch = [];
     let totalRead = 0;
     let totalInserted = 0;
-    let totalSkipped = 0;
+    let totalMatched = 0;
+    let totalUnmatched = 0;
     let totalErrors = 0;
-    let wardsNotFound = new Set();
+    const unmatchedWardValues = new Map();
 
     const stream = fs.createReadStream(CSV_FILE).pipe(csv());
+
+    const flushBatch = async () => {
+      if (batch.length === 0) return;
+      try {
+        await Business.insertMany(batch, { ordered: false });
+        totalInserted += batch.length;
+      } catch (err) {
+        if (err.insertedDocs) totalInserted += err.insertedDocs.length;
+        totalErrors += batch.length - (err.insertedDocs?.length || 0);
+      }
+      batch = [];
+    };
 
     for await (const row of stream) {
       totalRead++;
 
-      // Parse ward_id from CSV
-      const wardNo = parseFloat(row.ward_id);
-      if (isNaN(wardNo)) {
-        totalSkipped++;
-        continue;
-      }
+      const wardNameRaw = (row.Ward || '').trim();
+      const wardKeyRaw = wardNameRaw.toUpperCase();
+      const wardKey = WARD_NAME_ALIASES[wardKeyRaw] || wardKeyRaw;
+      const ward = wardMap.get(wardKey);
 
-      const wardNoInt = Math.round(wardNo);
-      const ward = wardMap.get(wardNoInt);
-
-      if (!ward) {
-        wardsNotFound.add(wardNoInt);
-        totalSkipped++;
-        continue;
+      if (ward) {
+        totalMatched++;
+      } else {
+        totalUnmatched++;
+        unmatchedWardValues.set(wardNameRaw, (unmatchedWardValues.get(wardNameRaw) || 0) + 1);
       }
 
       const lat = parseFloat(row.lat);
@@ -85,14 +106,15 @@ async function uploadBusinesses() {
         neighborhood: row.Location || null,
         district: row['District Name'] || null,
         pincode: row.Pincode ? String(Math.round(parseFloat(row.Pincode))) : null,
-        // Ward relationship
-        ward: ward._id,
-        ward_no: wardNoInt,
-        ward_name: row.ward_name || ward.NAME,
-        // Circle info from ward metadata (if available)
-        circle_no: ward.CIRCLE_NO || null,
-        circle_name: ward.CIR_NAM_NU || null,
-        // Location
+        // Trusted as-is from the CSV, regardless of whether a ward matched
+        division_name: row.Division || null,
+        circle_name: row.Circle || null,
+        ward_name: row.Ward || null,
+        // Only set when the Ward column resolved to an actual ward
+        ward: ward ? ward._id : undefined,
+        ward_no: ward ? ward.WARD_NO : undefined,
+        circle_no: ward ? ward.CIRCLE_NO : undefined,
+        circle: ward ? ward.circle : undefined,
         latitude: !isNaN(lat) ? lat : null,
         longitude: !isNaN(lng) ? lng : null,
         location: (!isNaN(lat) && !isNaN(lng)) ? {
@@ -104,59 +126,36 @@ async function uploadBusinesses() {
       batch.push(businessDoc);
 
       if (batch.length >= BATCH_SIZE) {
-        try {
-          await Business.insertMany(batch, { ordered: false });
-          totalInserted += batch.length;
-        } catch (err) {
-          // Some may have inserted, count what we can
-          if (err.insertedDocs) {
-            totalInserted += err.insertedDocs.length;
-          }
-          totalErrors += batch.length - (err.insertedDocs?.length || 0);
-        }
-        batch = [];
-
-        if (totalInserted % 10000 === 0 || totalInserted % BATCH_SIZE === 0) {
+        await flushBatch();
+        if (totalInserted % 50000 < BATCH_SIZE) {
           console.log(`  Progress: ${totalRead} read / ${totalInserted} inserted...`);
         }
       }
     }
 
-    // Insert remaining batch
-    if (batch.length > 0) {
-      try {
-        await Business.insertMany(batch, { ordered: false });
-        totalInserted += batch.length;
-      } catch (err) {
-        if (err.insertedDocs) {
-          totalInserted += err.insertedDocs.length;
-        }
-        totalErrors += batch.length - (err.insertedDocs?.length || 0);
-      }
-    }
+    await flushBatch();
 
-    // Update ward business counts
     console.log('\nUpdating ward business counts...');
     const wardCounts = await Business.aggregate([
+      { $match: { ward: { $ne: null } } },
       { $group: { _id: '$ward', count: { $sum: 1 } } }
     ]);
     for (const { _id, count } of wardCounts) {
-      if (_id) {
-        await Ward.findByIdAndUpdate(_id, { business_count: count });
-      }
+      await Ward.findByIdAndUpdate(_id, { business_count: count });
     }
     console.log(`Updated business counts for ${wardCounts.length} wards`);
 
     console.log('\n--- Business Upload Summary ---');
     console.log(`Total CSV rows:      ${totalRead}`);
     console.log(`Total inserted:      ${totalInserted}`);
-    console.log(`Total skipped:       ${totalSkipped}`);
+    console.log(`Matched to a ward:   ${totalMatched}`);
+    console.log(`Unmatched (no ward): ${totalUnmatched}`);
     console.log(`Total errors:        ${totalErrors}`);
-    if (wardsNotFound.size > 0) {
-      console.log(`Wards not found (${wardsNotFound.size}):`, [...wardsNotFound].sort((a,b) => a-b).slice(0, 20));
+    if (unmatchedWardValues.size > 0) {
+      const top = [...unmatchedWardValues.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
+      console.log(`Top unmatched Ward values:`, top);
     }
 
-    // Verify
     const totalInDB = await Business.countDocuments();
     console.log(`\nTotal businesses now in database: ${totalInDB}`);
 

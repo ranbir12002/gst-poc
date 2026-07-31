@@ -5,6 +5,7 @@ import MapIcon from '@mui/icons-material/Map';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import BusinessIcon from '@mui/icons-material/Business';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import TerrainIcon from '@mui/icons-material/Terrain';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
 import { GEOJSON_BACKEND_URL } from '../config';
@@ -103,6 +104,15 @@ function Dashboard() {
               value={stats?.unassignedWards}
               color="#f44336"
               onClick={() => navigate('/circle-management')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              icon={<TerrainIcon fontSize="large" />}
+              label="Rural Businesses"
+              value={stats?.ruralBusinesses?.toLocaleString()}
+              color="#795548"
+              onClick={() => navigate('/rural')}
             />
           </Grid>
         </Grid>

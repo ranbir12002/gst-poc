@@ -33,7 +33,11 @@ function Navbar() {
                         {(user.role === 'admin' || user.role === 'root' || user.role === 'region' || user.role === 'circle') && (
                             <Button color="inherit" component={Link} to="/all-map">Map View</Button>
                         )}
-                        
+
+                        {(user.role === 'admin' || user.role === 'root' || user.role === 'region' || user.role === 'circle') && (
+                            <Button color="inherit" component={Link} to="/rural">Rural</Button>
+                        )}
+
                         <Button 
                             color="inherit" 
                             component={Link} 

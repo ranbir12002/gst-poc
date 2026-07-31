@@ -1,0 +1,15 @@
+**/node_modules
+.git
+.gitignore
+.gitattributes
+
+# secrets are injected via env_file / environment at runtime, not baked into the image
+backend/.env
+map-selector/.env
+
+# large source data — bind-mounted into the container instead, not part of the image
+data/
+final_data/
+
+map-selector/build
+npm-debug.log*
