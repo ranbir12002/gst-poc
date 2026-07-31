@@ -9,10 +9,13 @@ services:
       MONGO_INITDB_DATABASE: stateGst
     volumes:
       - mongo_data:/data/db
-    # Exposed to the host so you can point MongoDB Compass / mongosh at it
-    # from Windows for manual verification. Remove this if that's not needed.
+    # Exposed to the host (on 27018, since a local mongod is often already
+    # on 27017) so you can point MongoDB Compass / mongosh at it from
+    # Windows for manual verification. Remove this if that's not needed.
+    # Container-to-container traffic (the app) always uses mongo:27017
+    # regardless of this mapping.
     ports:
-      - "127.0.0.1:27017:27017"
+      - "127.0.0.1:27018:27017"
     networks:
       - gst-net
     healthcheck:
@@ -59,7 +62,7 @@ services:
     container_name: gst-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "${HTTP_PORT:-80}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
